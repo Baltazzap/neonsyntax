@@ -45,7 +45,7 @@ MUTE_ROLE_ID = 1477952295869349888
 LOGS_CHANNEL_ID = 1477964505546883184
 
 # ID владельца (твой Discord ID)
-OWNER_ID = 1477952025034752070  # ✅ Замени на свой ID
+OWNER_ID = 314805583788244993  # ✅ Замени на свой ID
 
 if not BOT_TOKEN:
     raise ValueError("⚠️ Ошибка: Токен не найден! Проверь файл .env")
