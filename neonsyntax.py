@@ -44,7 +44,7 @@ MODERATOR_ROLE_ID = 1477952291439902791
 MUTE_ROLE_ID = 1477952295869349888
 LOGS_CHANNEL_ID = 1477964505546883184
 
-OWNER_ID = 1477952025034752070
+OWNER_ID = 314805583788244993
 
 # ID каналов
 CHANNEL_RULES = 1477955006203428919
@@ -1079,7 +1079,7 @@ async def on_ready():
     
     status = discord.Activity(
         type=discord.ActivityType.watching,
-        name="!start /start | !help /help"
+        name="Модерирую сервер NeonSyntax | DevStudio"
     )
     await bot.change_presence(activity=status)
     
@@ -1092,6 +1092,6 @@ async def on_ready():
     print(f'📋 Система логов: Готова')
     print(f'👑 Система embed: Готова')
     print(f'🤖 Авто-модерация: Активирована')
-    print(f'🎧 Статус: Слушает !start /start | !help /help')
+    print(f'🎧 Статус: Модерирую сервер NeonSyntax | DevStudio')
 
 bot.run(BOT_TOKEN)
