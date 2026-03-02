@@ -175,53 +175,14 @@ async def log_action(guild, action, user, target=None, reason=None):
 
 @bot.event
 async def on_ready():
-    """Запуск бота"""
     logger.info(f'✅ {bot.user} успешно запущен!')
-    logger.info(f'📊 Серверов: {len(bot.guilds)}')
     
-    # Проверка доступа к серверу
-    guild = bot.get_guild(GUILD_ID)
-    if guild:
-        logger.info(f"✅ Доступ к серверу: {guild.name}")
-        logger.info(f"👥 Участников: {guild.member_count}")
-        
-        # Проверка прав бота
-        bot_member = guild.get_member(bot.user.id)
-        if bot_member:
-            perms = bot_member.guild_permissions
-            logger.info(f"🔨 Admin: {perms.administrator}")
-            logger.info(f"📝 Manage Channels: {perms.manage_channels}")
-            logger.info(f"🎭 Manage Roles: {perms.manage_roles}")
-    else:
-        logger.error(f"❌ НЕТ ДОСТУПА к серверу ID: {GUILD_ID}")
-        logger.error("📋 Проверьте:")
-        logger.error("  1. Бот добавлен на сервер?")
-        logger.error("  2. Правильный GUILD_ID в .env?")
-        logger.error("  3. Бот не забанен?")
-    
-    # Синхронизация команд (только если есть доступ)
+    # Глобальная синхронизация (работает на всех серверах)
     try:
-        if guild:
-            synced = await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
-            logger.info(f"🔄 Синхронизировано {len(synced)} команд")
-        else:
-            logger.warning("⚠️ Пропуск синхронизации - нет доступа к серверу")
+        synced = await bot.tree.sync()  # Без guild=
+        logger.info(f"🔄 Синхронизировано {len(synced)} команд (глобально)")
     except Exception as e:
-        logger.error(f"❌ Ошибка синхронизации: {e}")
-        logger.error("📋 Попробуйте:")
-        logger.error("  1. Перепригласить бота с правами Administrator")
-        logger.error("  2. Проверить GUILD_ID в .env")
-        logger.error("  3. Убедиться что бот на сервере")
-    
-    update_stats.start()
-    check_mutes.start()
-    
-    await bot.change_presence(
-        activity=discord.Activity(
-            type=discord.ActivityType.watching,
-            name="/help | NeonSyntax"
-        )
-    )
+        logger.error(f"❌ Ошибка: {e}")
 
 @bot.event
 async def on_member_join(member):
