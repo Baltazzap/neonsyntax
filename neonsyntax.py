@@ -671,7 +671,7 @@ class EmbedModal(Modal, title="📝 Создание Embed"):
         placeholder="Введите описание embed",
         required=False,
         style=discord.TextStyle.long,
-        max_length=4096
+        max_length=4000
     )
     
     color_input = TextInput(
