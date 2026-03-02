@@ -1,11 +1,12 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from discord.ui import Button, View
+from discord.ui import Button, View, Modal, TextInput
 from dotenv import load_dotenv
 import os
 import json
 from datetime import datetime
+import asyncio
 
 # Загрузка токена из .env
 load_dotenv()
@@ -14,15 +15,15 @@ load_dotenv()
 # 🎨 НЕОНОВАЯ ПАЛИТРА
 # ==========================================
 class NeonColors:
-    PURPLE = 0x8A2BE2      # Основной бренд
-    BLUE = 0x00BFFF        # Информация
-    GREEN = 0x00FF7F       # Успех / Telegram
-    RED = 0xFF1493         # Ошибки / Закрытие / Бан
-    GOLD = 0xFFD700        # Прайс
-    CYAN = 0x00FFFF        # Тикеты заказов
-    ORANGE = 0xFFA500      # Стафф тикеты
-    YELLOW = 0xFFFF00      # Предупреждения
-    GRAY = 0x808080        # Мут
+    PURPLE = 0x8A2BE2
+    BLUE = 0x00BFFF
+    GREEN = 0x00FF7F
+    RED = 0xFF1493
+    GOLD = 0xFFD700
+    CYAN = 0x00FFFF
+    ORANGE = 0xFFA500
+    YELLOW = 0xFFFF00
+    GRAY = 0x808080
     WHITE = 0xFFFFFF
     DARK = 0x0D0D0D
 
@@ -31,24 +32,20 @@ class NeonColors:
 # ==========================================
 BOT_TOKEN = os.getenv('DISCORD_TOKEN')
 
-# ID сервера и ролей
 GUILD_ID = 1477952025034752070
 WELCOME_ROLE_ID = 1477952294984224809
 WELCOME_CHANNEL_ID = 1477955639937466531
-
-# Тикеты заказов (клиенты)
 TICKET_CATEGORY_ID = 1477997491659214968
 DEVELOPER_ROLE_ID = 1477952290148192338
 ADMIN_ROLE_ID = 1477952288076201984
-
-# Тикеты стаффа (заявки)
 STAFF_TICKET_CATEGORY_ID = 1478003822352662600
 SUPPORT_ROLE_ID = 1477952291439902791
 MODERATOR_ROLE_ID = 1477952291439902791
-
-# Модерация ✅ НОВОЕ
 MUTE_ROLE_ID = 1477952295869349888
 LOGS_CHANNEL_ID = 1477964505546883184
+
+# ID владельца (твой Discord ID)
+OWNER_ID = 314805583788244993  # ✅ Замени на свой ID
 
 if not BOT_TOKEN:
     raise ValueError("⚠️ Ошибка: Токен не найден! Проверь файл .env")
@@ -63,7 +60,6 @@ intents.members = True
 bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
 tree = bot.tree
 
-# Файлы для хранения
 TICKET_FILE = "tickets.json"
 STAFF_TICKET_FILE = "staff_tickets.json"
 WARNINGS_FILE = "warnings.json"
@@ -119,7 +115,6 @@ def clear_warnings(user_id):
 # ==========================================
 
 async def log_action(guild, action_type, moderator, target, reason=None, duration=None):
-    """Запись действия в лог-канал"""
     channel = discord.utils.get(guild.channels, id=LOGS_CHANNEL_ID)
     if not channel:
         return
@@ -130,7 +125,8 @@ async def log_action(guild, action_type, moderator, target, reason=None, duratio
         'mute': NeonColors.GRAY,
         'unmute': NeonColors.GREEN,
         'warn': NeonColors.YELLOW,
-        'clear_warn': NeonColors.BLUE
+        'clear_warn': NeonColors.BLUE,
+        'embed': NeonColors.PURPLE
     }
     
     emoji_map = {
@@ -139,7 +135,8 @@ async def log_action(guild, action_type, moderator, target, reason=None, duratio
         'mute': '🔇',
         'unmute': '🔊',
         'warn': '⚠️',
-        'clear_warn': '✅'
+        'clear_warn': '✅',
+        'embed': '📝'
     }
     
     embed = discord.Embed(
@@ -149,15 +146,14 @@ async def log_action(guild, action_type, moderator, target, reason=None, duratio
     )
     
     embed.add_field(name="👤 **Модератор**", value=f"{moderator.mention} (`{moderator.id}`)", inline=True)
-    embed.add_field(name="🎯 **Пользователь**", value=f"{target.mention} (`{target.id}`)", inline=True)
+    if target:
+        embed.add_field(name="🎯 **Пользователь**", value=f"{target.mention} (`{target.id}`)", inline=True)
     if duration:
         embed.add_field(name="⏱ **Длительность**", value=duration, inline=True)
-    
     if reason:
         embed.add_field(name="📄 **Причина**", value=f"```{reason}```", inline=False)
     
     embed.set_footer(text=f"NeonSyntax | DevStudio • Лог действий")
-    embed.set_thumbnail(url=target.avatar.url if target.avatar else None)
     
     await channel.send(embed=embed)
 
@@ -244,13 +240,13 @@ def create_price_embed():
 def create_start_embed():
     embed = discord.Embed(
         title="🚀 **NeonSyntax | DevStudio**",
-        description="**Профессиональная разработка ботов и автоматизация**\n\nМы создаём цифровые решения для вашего бизнеса с 2021 года.",
+        description="**Профессиональная разработка ботов и автоматизация**\n\nМы создаём цифровые решения для вашего бизнеса с 2026 года.",
         color=NeonColors.PURPLE,
         timestamp=datetime.utcnow()
     )
     embed.add_field(name="📊 **Проекты**", value="• **50+** успешных\n• **30+** клиентов\n• **98%** отзывов", inline=True)
     embed.add_field(name="⚡ **Технологии**", value="• Python 3.11+\n• Discord.py 2.0+\n• Aiogram 3.x", inline=True)
-    embed.set_footer(text="NeonSyntax | DevStudio © 2024")
+    embed.set_footer(text="NeonSyntax | DevStudio © 2026")
     return embed
 
 def create_contact_embed():
@@ -468,6 +464,7 @@ async def slash_help(interaction: discord.Interaction):
     embed.add_field(name="🔹 **Заказы**", value="`/ticket` — Панель заказов\n`/start` — Главная\n`/price` — Прайс", inline=True)
     embed.add_field(name="🔸 **Стафф**", value="`/staff` — Панель заявок\n`/help` — Это меню", inline=True)
     embed.add_field(name="🔹 **Модерация**", value="`/ban` — Бан\n`/kick` — Кик\n`/mute` — Мут\n`/warn` — Предупреждение", inline=True)
+    embed.add_field(name="🔸 **Владелец**", value="`/embed` — Кастомный Embed", inline=True)
     await interaction.response.send_message(embed=embed)
 
 @tree.command(name="ticket", description="📩 Панель заказов (Админ)", guild=discord.Object(id=GUILD_ID))
@@ -491,7 +488,6 @@ async def slash_staff(interaction: discord.Interaction):
 # ==========================================
 
 def check_moderator(member):
-    """Проверка прав модератора"""
     return any(role.id in [ADMIN_ROLE_ID, MODERATOR_ROLE_ID] for role in member.roles)
 
 @tree.command(name="ban", description="🔨 Забанить пользователя", guild=discord.Object(id=GUILD_ID))
@@ -508,7 +504,7 @@ async def slash_ban(interaction: discord.Interaction, user: discord.Member, reas
         return
     
     if user.top_role.position >= interaction.user.top_role.position:
-        embed = discord.Embed(title="❌ **Ошибка**", description="Нельзя банить пользователя с ролью выше или равной вашей!", color=NeonColors.RED, timestamp=datetime.utcnow())
+        embed = discord.Embed(title="❌ **Ошибка**", description="Нельзя банить пользователя с ролью выше!", color=NeonColors.RED, timestamp=datetime.utcnow())
         await interaction.response.send_message(embed=embed, ephemeral=True)
         return
     
@@ -535,7 +531,7 @@ async def slash_kick(interaction: discord.Interaction, user: discord.Member, rea
         return
     
     if user.top_role.position >= interaction.user.top_role.position:
-        embed = discord.Embed(title="❌ **Ошибка**", description="Нельзя кикнуть пользователя с ролью выше или равной вашей!", color=NeonColors.RED, timestamp=datetime.utcnow())
+        embed = discord.Embed(title="❌ **Ошибка**", description="Нельзя кикнуть пользователя с ролью выше!", color=NeonColors.RED, timestamp=datetime.utcnow())
         await interaction.response.send_message(embed=embed, ephemeral=True)
         return
     
@@ -573,7 +569,6 @@ async def slash_mute(interaction: discord.Interaction, user: discord.Member, dur
         await interaction.response.send_message(embed=embed)
         await log_action(interaction.guild, 'mute', interaction.user, user, reason, f"{duration} мин.")
         
-        # Автоматическое снятие мута
         await asyncio.sleep(duration * 60)
         if mute_role in user.roles:
             await user.remove_roles(mute_role, reason="Мут истёк")
@@ -654,6 +649,119 @@ async def slash_clearwarnings(interaction: discord.Interaction, user: discord.Me
     embed = discord.Embed(title="✅ **Предупреждения очищены**", description=f"У {user.mention} удалены все предупреждения.", color=NeonColors.GREEN, timestamp=datetime.utcnow())
     await interaction.response.send_message(embed=embed)
     await log_action(interaction.guild, 'clear_warn', interaction.user, user, "Очистка предупреждений")
+
+# ==========================================
+# 👑 СИСТЕМА EMBED ДЛЯ ВЛАДЕЛЬЦА
+# ==========================================
+
+class EmbedModal(Modal, title="📝 Создание Embed"):
+    def __init__(self, channel):
+        super().__init__()
+        self.channel = channel
+
+    title_input = TextInput(
+        label="Заголовок",
+        placeholder="Введите заголовок embed",
+        required=False,
+        max_length=256
+    )
+    
+    description_input = TextInput(
+        label="Описание",
+        placeholder="Введите описание embed",
+        required=False,
+        style=discord.TextStyle.long,
+        max_length=4096
+    )
+    
+    color_input = TextInput(
+        label="Цвет (HEX)",
+        placeholder="#8A2BE2 или 8A2BE2",
+        required=False,
+        max_length=7
+    )
+    
+    footer_input = TextInput(
+        label="Текст футера",
+        placeholder="Текст внизу embed",
+        required=False,
+        max_length=2048
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        try:
+            # Создаём embed
+            embed = discord.Embed(timestamp=datetime.utcnow())
+            
+            if self.title_input.value:
+                embed.title = self.title_input.value
+            
+            if self.description_input.value:
+                embed.description = self.description_input.value
+            
+            if self.color_input.value:
+                color = self.color_input.value.replace('#', '')
+                embed.color = int(color, 16)
+            else:
+                embed.color = NeonColors.PURPLE
+            
+            if self.footer_input.value:
+                embed.set_footer(text=self.footer_input.value)
+            
+            # Отправляем embed
+            await self.channel.send(embed=embed)
+            
+            # Логирование
+            await log_action(interaction.guild, 'embed', interaction.user, None, f"Embed отправлен в {self.channel.mention}")
+            
+            embed_success = discord.Embed(
+                title="✅ **Embed отправлен**",
+                description="Ваш кастомный embed успешно отправлен в канал.",
+                color=NeonColors.GREEN,
+                timestamp=datetime.utcnow()
+            )
+            await interaction.response.send_message(embed=embed_success, ephemeral=True)
+            
+        except Exception as e:
+            embed_error = discord.Embed(
+                title="❌ **Ошибка**",
+                description=f"Не удалось отправить embed: {e}",
+                color=NeonColors.RED,
+                timestamp=datetime.utcnow()
+            )
+            await interaction.response.send_message(embed=embed_error, ephemeral=True)
+
+@tree.command(name="embed", description="📝 Создать кастомный embed (Только Владелец)", guild=discord.Object(id=GUILD_ID))
+@app_commands.describe(channel="Канал для отправки embed")
+async def slash_embed(interaction: discord.Interaction, channel: discord.TextChannel):
+    if interaction.user.id != OWNER_ID:
+        embed = discord.Embed(title="❌ **Нет доступа**", description="Только для Владельца бота!", color=NeonColors.RED, timestamp=datetime.utcnow())
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
+    
+    modal = EmbedModal(channel)
+    await interaction.response.send_modal(modal)
+
+@bot.command()
+async def embed(ctx, channel: discord.TextChannel = None):
+    """Префиксная версия команды embed"""
+    if ctx.author.id != OWNER_ID:
+        embed = discord.Embed(title="❌ **Нет доступа**", description="Только для Владельца бота!", color=NeonColors.RED, timestamp=datetime.utcnow())
+        await ctx.send(embed=embed)
+        return
+    
+    if channel is None:
+        channel = ctx.channel
+    
+    modal = EmbedModal(channel)
+    # Для префиксных команд модальные окна не работают, используем простой вариант
+    embed = discord.Embed(
+        title="❌ **Только слэш команда**",
+        description="Используйте `/embed` для создания кастомного embed.",
+        color=NeonColors.RED,
+        timestamp=datetime.utcnow()
+    )
+    await ctx.send(embed=embed)
 
 # Префиксные команды модерации
 @bot.command()
@@ -746,13 +854,26 @@ async def staff(ctx):
     await ctx.send(embed=create_staff_panel_embed(), view=StaffPanelView())
 
 @bot.command()
-async def start(ctx): await ctx.send(embed=create_start_embed())
+async def start(ctx): 
+    await ctx.send(embed=create_start_embed())
+
 @bot.command()
-async def price(ctx): await ctx.send(embed=create_price_embed())
+async def price(ctx): 
+    await ctx.send(embed=create_price_embed())
+
 @bot.command()
-async def contact(ctx): await ctx.send(embed=create_contact_embed())
+async def contact(ctx): 
+    await ctx.send(embed=create_contact_embed())
+
 @bot.command()
-async def help(ctx): await ctx.send(embed=discord.Embed(title="❓ **Помощь**", color=NeonColors.PURPLE, description="`/ticket`, `/staff`, `/ban`, `/kick`, `/mute`, `/warn`"))
+async def help(ctx): 
+    embed = discord.Embed(title="❓ **Помощь**", description="**Команды бота**", color=NeonColors.PURPLE, timestamp=datetime.utcnow())
+    embed.add_field(name="🔹 **Инфо**", value="`!start` — Главная\n`!price` — Прайс\n`!contact` — Контакты", inline=True)
+    embed.add_field(name="🔸 **Тикеты**", value="`!ticket` — Панель заказов\n`!staff` — Панель заявок", inline=True)
+    embed.add_field(name="🔹 **Модерация**", value="`!ban` — Бан\n`!kick` — Кик\n`!mute` — Мут\n`!warn` — Предупреждение", inline=True)
+    embed.add_field(name="🔸 **Владелец**", value="`/embed` — Кастомный Embed", inline=True)
+    embed.set_footer(text="NeonSyntax | DevStudio © 2026")
+    await ctx.send(embed=embed)
 
 # ==========================================
 # 🚀 ЗАПУСК
@@ -771,10 +892,13 @@ async def on_ready():
     bot.add_view(CloseTicketView())
     
     print(f'✅ Бот запущен: {bot.user}')
-    print(f'🎨 NeonSyntax | DevStudio: Активирован')
+    print(f'🆔 ID Бота: {bot.user.id}')
+    print(f'🎨 NeonSyntax | DevStudio © 2026')
     print(f'📩 Система заказов: Готова')
     print(f'🛡️ Система стаффа: Готова')
     print(f'🔨 Система модерации: Готова')
     print(f'📋 Система логов: Готова')
+    print(f'👑 Система embed: Готова')
+    print(f'📢 Бот слушает: !start /start | !help /help')
 
 bot.run(BOT_TOKEN)
