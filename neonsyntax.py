@@ -55,10 +55,10 @@ CHANNEL_PAYMENT = 1477955908536635514
 CHANNEL_GUARANTEE = 1477956108978098246
 
 # Настройки анти-модерации
-ANTI_SPAM_MESSAGES = 5          # Количество сообщений
-ANTI_SPAM_SECONDS = 5           # За какое время
-ANTI_CAPS_PERCENT = 70          # Процент капса
-MUTE_DURATION_MINUTES = 10      # Длительность мута
+ANTI_SPAM_MESSAGES = 5
+ANTI_SPAM_SECONDS = 5
+ANTI_CAPS_PERCENT = 70
+MUTE_DURATION_MINUTES = 10
 
 if not BOT_TOKEN:
     raise ValueError("⚠️ Ошибка: Токен не найден! Проверь файл .env")
@@ -79,7 +79,7 @@ STAFF_TICKET_FILE = "staff_tickets.json"
 WARNINGS_FILE = "warnings.json"
 VIOLATIONS_FILE = "violations.json"
 
-# Хранилище нарушений в памяти (для скорости)
+# Хранилище нарушений в памяти
 violations = {}
 
 # ==========================================
@@ -112,7 +112,7 @@ def save_warnings(data):
 
 def add_warning(user_id, moderator, reason):
     data = get_warnings()
-    if str(user_id) not in 
+    if str(user_id) not in data:  # ✅ ИСПРАВЛЕНО: добавлено "data"
         data[str(user_id)] = []
     data[str(user_id)].append({
         'moderator': moderator,
@@ -128,7 +128,7 @@ def get_user_warnings(user_id):
 
 def clear_warnings(user_id):
     data = get_warnings()
-    if str(user_id) in 
+    if str(user_id) in data:  # ✅ ИСПРАВЛЕНО: добавлено "data"
         del data[str(user_id)]
         save_warnings(data)
 
@@ -149,7 +149,7 @@ def add_violation(user_id, violation_type):
     get_violations()
     now = datetime.now().timestamp()
     
-    if str(user_id) not in 
+    if str(user_id) not in violations:  # ✅ ИСПРАВЛЕНО: добавлено "violations"
         violations[str(user_id)] = []
     
     violations[str(user_id)].append({
@@ -157,7 +157,6 @@ def add_violation(user_id, violation_type):
         'time': now
     })
     
-    # Очищаем старые нарушения (старше 1 часа)
     violations[str(user_id)] = [v for v in violations[str(user_id)] if now - v['time'] < 3600]
     
     save_violations()
@@ -168,10 +167,9 @@ def get_violation_count(user_id):
     get_violations()
     now = datetime.now().timestamp()
     
-    if str(user_id) not in 
+    if str(user_id) not in violations:  # ✅ ИСПРАВЛЕНО: добавлено "violations"
         return 0
     
-    # Считаем только нарушения за последний час
     recent = [v for v in violations[str(user_id)] if now - v['time'] < 3600]
     return len(recent)
 
@@ -233,11 +231,9 @@ async def log_action(guild, action_type, moderator, target, reason=None, duratio
 # ==========================================
 
 async def check_anti_spam(message):
-    """Проверка на спам (быстрые сообщения)"""
     if message.author.bot:
         return False
     
-    # Игнорируем админов и модераторов
     if any(role.id in [ADMIN_ROLE_ID, MODERATOR_ROLE_ID] for role in message.author.roles):
         return False
     
@@ -247,11 +243,9 @@ async def check_anti_spam(message):
     return len(user_messages) >= ANTI_SPAM_MESSAGES
 
 async def check_anti_caps(message):
-    """Проверка на капс (более 70% заглавных букв)"""
     if message.author.bot or len(message.content) < 10:
         return False
     
-    # Игнорируем админов и модераторов
     if any(role.id in [ADMIN_ROLE_ID, MODERATOR_ROLE_ID] for role in message.author.roles):
         return False
     
@@ -265,18 +259,15 @@ async def check_anti_caps(message):
     return caps_percent >= ANTI_CAPS_PERCENT
 
 async def handle_violation(message, violation_type):
-    """Обработка нарушения"""
     user = message.author
     count = add_violation(user.id, violation_type)
     
-    # Удаляем сообщение
     try:
         await message.delete()
     except:
         pass
     
     if count == 1:
-        # Первое нарушение - предупреждение
         embed = discord.Embed(
             title="⚠️ **ПРЕДУПРЕЖДЕНИЕ**",
             description=f"{user.mention}, вы нарушили правила сервера!\n\n**Нарушение:** `{violation_type}`\n\nПожалуйста, соблюдайте правила. При следующем нарушении вы получите **мут на 10 минут**.",
@@ -285,12 +276,11 @@ async def handle_violation(message, violation_type):
         )
         embed.set_footer(text="NeonSyntax | DevStudio • Автомодерация")
         
-        warn_msg = await message.channel.send(embed=embed, delete_after=30)
+        await message.channel.send(embed=embed, delete_after=30)
         
         await log_action(message.guild, violation_type, message.guild.me, user, f"Предупреждение #{count}")
         
     elif count >= 2:
-        # Второе нарушение - мут на 10 минут
         mute_role = discord.utils.get(message.guild.roles, id=MUTE_ROLE_ID)
         
         if mute_role:
@@ -309,7 +299,6 @@ async def handle_violation(message, violation_type):
                 
                 await log_action(message.guild, 'auto_mute', message.guild.me, user, f"{violation_type} (повторное нарушение)", f"{MUTE_DURATION_MINUTES} мин.")
                 
-                # Автоматическое снятие мута
                 await asyncio.sleep(MUTE_DURATION_MINUTES * 60)
                 
                 if mute_role in user.roles:
@@ -330,21 +319,17 @@ async def handle_violation(message, violation_type):
 
 @bot.event
 async def on_message(message):
-    # Игнорируем сообщения бота
     if message.author.bot:
         return
     
-    # Проверка на спам
     if await check_anti_spam(message):
         await handle_violation(message, 'anti_spam')
         return
     
-    # Проверка на капс
     if await check_anti_caps(message):
         await handle_violation(message, 'anti_caps')
         return
     
-    # Обработка команд
     await bot.process_commands(message)
 
 # ==========================================
@@ -963,7 +948,6 @@ async def embed(ctx, channel: discord.TextChannel = None):
     )
     await ctx.send(embed=embed)
 
-# Префиксные команды модерации
 @bot.command()
 async def ban(ctx, user: discord.Member, *, reason="Не указана"):
     if not check_moderator(ctx.author):
@@ -1091,10 +1075,8 @@ async def on_ready():
     bot.add_view(StaffPanelView())
     bot.add_view(CloseTicketView())
     
-    # Загрузка нарушений
     get_violations()
     
-    # ✅ УСТАНОВКА СТАТУСА БОТА
     status = discord.Activity(
         type=discord.ActivityType.watching,
         name="!start /start | !help /help"
