@@ -1,23 +1,31 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
+from dotenv import load_dotenv
 import os
 
-# ==========================================
-# НАСТРОЙКИ (ЗАПОЛНИ ЭТО ПЕРЕД ЗАПУСКОМ)
-# ==========================================
-BOT_TOKEN = os.getenv('DISCORD_TOKEN') 
-GUILD_ID = 123456789012345678        # ID твоего сервера
-WELCOME_ROLE_ID = 987654321098765432 # ID роли для выдачи
-WELCOME_CHANNEL_ID = 111111111111111 # ID канала для приветствия
-# ==========================================
+# Загрузка переменных из файла .env
+load_dotenv()
 
-# Настройка интентов
+# ==========================================
+# ПОЛУЧЕНИЕ ДАННЫХ ИЗ ПЕРЕМЕННЫХ ОКРУЖЕНИЯ
+# ==========================================
+BOT_TOKEN = os.getenv('DISCORD_TOKEN')
+GUILD_ID = int(os.getenv('1477952025034752070'))
+WELCOME_ROLE_ID = int(os.getenv('WELCOME_ROLE_ID'))
+WELCOME_CHANNEL_ID = int(os.getenv('WELCOME_CHANNEL_ID'))
+
+# Проверка наличия токена
+if not BOT_TOKEN:
+    raise ValueError("⚠️ Токен бота не найден! Проверьте файл .env")
+
+# ==========================================
+# НАСТРОЙКА БОТА
+# ==========================================
 intents = discord.Intents.default()
-intents.message_content = True  # Обязательно для префиксных команд (!)
-intents.members = True          # Обязательно для выдачи ролей при входе
+intents.message_content = True  # Для префиксных команд
+intents.members = True          # Для выдачи ролей
 
-# ИСПРАВЛЕНИЕ: Используем commands.Bot вместо discord.Client
 bot = commands.Bot(command_prefix='!', intents=intents)
 tree = bot.tree
 
@@ -34,11 +42,11 @@ async def on_member_join(member):
         role = discord.utils.get(member.guild.roles, id=WELCOME_ROLE_ID)
         if role:
             await member.add_roles(role)
-            print(f"Роль выдана пользователю {member.name}")
+            print(f"✅ Роль выдана пользователю {member.name}")
         else:
-            print(f"Роль с ID {WELCOME_ROLE_ID} не найдена!")
+            print(f"⚠️ Роль с ID {WELCOME_ROLE_ID} не найдена!")
     except Exception as e:
-        print(f"Ошибка при выдаче роли: {e}")
+        print(f"❌ Ошибка при выдаче роли: {e}")
 
     # 2. Авто-приветствие
     try:
@@ -55,9 +63,9 @@ async def on_member_join(member):
             
             await channel.send(embed=embed)
         else:
-            print(f"Канал с ID {WELCOME_CHANNEL_ID} не найден!")
+            print(f"⚠️ Канал с ID {WELCOME_CHANNEL_ID} не найден!")
     except Exception as e:
-        print(f"Ошибка при отправке приветствия: {e}")
+        print(f"❌ Ошибка при отправке приветствия: {e}")
 
 # ==========================================
 # КОМАНДЫ (СЛЭШ И ПРЕФИКС)
@@ -96,7 +104,6 @@ async def slash_help(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed)
 
 # --- Префиксные команды (!) ---
-# Теперь используем @bot.command(), так как bot это commands.Bot
 
 @bot.command()
 async def start(ctx):
@@ -124,15 +131,14 @@ async def help(ctx):
 
 @bot.event
 async def on_ready():
-    # Синхронизация слэш-команд с сервером
     try:
         synced = await tree.sync(guild=discord.Object(id=GUILD_ID))
-        print(f"Синхронизировано {len(synced)} слэш-команд для сервера {GUILD_ID}")
+        print(f"✅ Синхронизировано {len(synced)} слэш-команд для сервера {GUILD_ID}")
     except Exception as e:
-        print(f"Ошибка синхронизации: {e}")
+        print(f"❌ Ошибка синхронизации: {e}")
 
-    print(f'Бот успешно запущен как {bot.user}')
-    print(f'ID Бота: {bot.user.id}')
+    print(f'✅ Бот успешно запущен как {bot.user}')
+    print(f'🆔 ID Бота: {bot.user.id}')
 
 # Запуск бота
 bot.run(BOT_TOKEN)
