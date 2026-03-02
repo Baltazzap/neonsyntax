@@ -45,7 +45,7 @@ MUTE_ROLE_ID = 1477952295869349888
 LOGS_CHANNEL_ID = 1477964505546883184
 
 # ID владельца (твой Discord ID)
-OWNER_ID = 314805583788244993  # ✅ Замени на свой ID
+OWNER_ID = 314805583788244993
 
 if not BOT_TOKEN:
     raise ValueError("⚠️ Ошибка: Токен не найден! Проверь файл .env")
@@ -90,7 +90,7 @@ def save_warnings(data):
 
 def add_warning(user_id, moderator, reason):
     data = get_warnings()
-    if str(user_id) not in 
+    if str(user_id) not in data:  # ✅ ИСПРАВЛЕНО: добавлено "data:"
         data[str(user_id)] = []
     data[str(user_id)].append({
         'moderator': moderator,
@@ -106,7 +106,7 @@ def get_user_warnings(user_id):
 
 def clear_warnings(user_id):
     data = get_warnings()
-    if str(user_id) in 
+    if str(user_id) in data:  # ✅ ИСПРАВЛЕНО: добавлено "data"
         del data[str(user_id)]
         save_warnings(data)
 
@@ -671,7 +671,7 @@ class EmbedModal(Modal, title="📝 Создание Embed"):
         placeholder="Введите описание embed",
         required=False,
         style=discord.TextStyle.long,
-        max_length=4000
+        max_length=4000  # ✅ ИСПРАВЛЕНО: было 4096
     )
     
     color_input = TextInput(
