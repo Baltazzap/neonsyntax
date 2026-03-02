@@ -45,7 +45,7 @@ MUTE_ROLE_ID = 1477952295869349888
 LOGS_CHANNEL_ID = 1477964505546883184
 
 # ID владельца (твой Discord ID)
-OWNER_ID = 314805583788244993  # ✅ Замени на свой ID
+OWNER_ID = 1477952025034752070  # ✅ Замени на свой ID
 
 if not BOT_TOKEN:
     raise ValueError("⚠️ Ошибка: Токен не найден! Проверь файл .env")
@@ -90,7 +90,7 @@ def save_warnings(data):
 
 def add_warning(user_id, moderator, reason):
     data = get_warnings()
-    if str(user_id) not in data:
+    if str(user_id) not in 
         data[str(user_id)] = []
     data[str(user_id)].append({
         'moderator': moderator,
@@ -106,7 +106,7 @@ def get_user_warnings(user_id):
 
 def clear_warnings(user_id):
     data = get_warnings()
-    if str(user_id) in data:
+    if str(user_id) in 
         del data[str(user_id)]
         save_warnings(data)
 
@@ -690,7 +690,6 @@ class EmbedModal(Modal, title="📝 Создание Embed"):
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
-            # Создаём embed
             embed = discord.Embed(timestamp=datetime.utcnow())
             
             if self.title_input.value:
@@ -708,10 +707,7 @@ class EmbedModal(Modal, title="📝 Создание Embed"):
             if self.footer_input.value:
                 embed.set_footer(text=self.footer_input.value)
             
-            # Отправляем embed
             await self.channel.send(embed=embed)
-            
-            # Логирование
             await log_action(interaction.guild, 'embed', interaction.user, None, f"Embed отправлен в {self.channel.mention}")
             
             embed_success = discord.Embed(
@@ -744,7 +740,6 @@ async def slash_embed(interaction: discord.Interaction, channel: discord.TextCha
 
 @bot.command()
 async def embed(ctx, channel: discord.TextChannel = None):
-    """Префиксная версия команды embed"""
     if ctx.author.id != OWNER_ID:
         embed = discord.Embed(title="❌ **Нет доступа**", description="Только для Владельца бота!", color=NeonColors.RED, timestamp=datetime.utcnow())
         await ctx.send(embed=embed)
@@ -753,8 +748,6 @@ async def embed(ctx, channel: discord.TextChannel = None):
     if channel is None:
         channel = ctx.channel
     
-    modal = EmbedModal(channel)
-    # Для префиксных команд модальные окна не работают, используем простой вариант
     embed = discord.Embed(
         title="❌ **Только слэш команда**",
         description="Используйте `/embed` для создания кастомного embed.",
@@ -891,6 +884,13 @@ async def on_ready():
     bot.add_view(StaffPanelView())
     bot.add_view(CloseTicketView())
     
+    # ✅ УСТАНОВКА СТАТУСА БОТА
+    status = discord.Activity(
+        type=discord.ActivityType.watching,
+        name="!start /start | !help /help"
+    )
+    await bot.change_presence(activity=status)
+    
     print(f'✅ Бот запущен: {bot.user}')
     print(f'🆔 ID Бота: {bot.user.id}')
     print(f'🎨 NeonSyntax | DevStudio © 2026')
@@ -899,6 +899,6 @@ async def on_ready():
     print(f'🔨 Система модерации: Готова')
     print(f'📋 Система логов: Готова')
     print(f'👑 Система embed: Готова')
-    print(f'📢 Бот слушает: !start /start | !help /help')
+    print(f'🎧 Статус: Слушает !start /start | !help /help')
 
 bot.run(BOT_TOKEN)
