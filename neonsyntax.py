@@ -13,9 +13,9 @@ load_dotenv()
 BOT_TOKEN = os.getenv('DISCORD_TOKEN')  # Токен оставляем в .env для безопасности
 
 # Вставь свои ID ниже внутри кавычек
-GUILD_ID = 1477952025034752070          # ID сервера
-WELCOME_ROLE_ID = 1477952294984224809   # ID роли для выдачи
-WELCOME_CHANNEL_ID = 1477955639937466531   # ID канала для приветствия
+GUILD_ID = 123456789012345678          # ID сервера
+WELCOME_ROLE_ID = 987654321098765432   # ID роли для выдачи
+WELCOME_CHANNEL_ID = 111111111111111   # ID канала для приветствия
 # ==========================================
 
 # Проверка токена
@@ -29,7 +29,8 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
-bot = commands.Bot(command_prefix='!', intents=intents)
+# ✅ ИСПРАВЛЕНИЕ: help_command=None отключает встроенную команду help
+bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
 tree = bot.tree
 
 # ==========================================
@@ -86,14 +87,23 @@ async def slash_contact(interaction: discord.Interaction):
 async def slash_help(interaction: discord.Interaction):
     await interaction.response.send_message("❓ **Команды:**\n`/start`, `/price`, `/contact`\n`!start`, `!price`, `!contact`")
 
+# --- Префиксные команды (!) ---
+
 @bot.command()
-async def start(ctx): await ctx.send("🚀 **Разработка Ботов**\nИспользуй /start для меню.")
+async def start(ctx): 
+    await ctx.send("🚀 **Разработка Ботов**\nИспользуй /start для меню.")
+
 @bot.command()
-async def price(ctx): await ctx.send("💰 **Прайс:**\nОт 1000₽ до 10000₽")
+async def price(ctx): 
+    await ctx.send("💰 **Прайс:**\nОт 1000₽ до 10000₽")
+
 @bot.command()
-async def contact(ctx): await ctx.send("📞 **Связь:**\nTelegram: @твой_ник")
+async def contact(ctx): 
+    await ctx.send("📞 **Связь:**\nTelegram: @твой_ник")
+
 @bot.command()
-async def help(ctx): await ctx.send("❓ **Команды:**\n!start, !price, !contact")
+async def help(ctx): 
+    await ctx.send("❓ **Команды:**\n!start, !price, !contact")
 
 # ==========================================
 # ЗАПУСК
