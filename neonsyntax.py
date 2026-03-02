@@ -17,15 +17,17 @@ class NeonColors:
     PURPLE = 0x8A2BE2      # Основной бренд
     BLUE = 0x00BFFF        # Информация
     GREEN = 0x00FF7F       # Успех / Telegram
-    RED = 0xFF1493         # Ошибки / Закрытие
+    RED = 0xFF1493         # Ошибки / Закрытие / Бан
     GOLD = 0xFFD700        # Прайс
     CYAN = 0x00FFFF        # Тикеты заказов
     ORANGE = 0xFFA500      # Стафф тикеты
+    YELLOW = 0xFFFF00      # Предупреждения
+    GRAY = 0x808080        # Мут
     WHITE = 0xFFFFFF
     DARK = 0x0D0D0D
 
 # ==========================================
-# ⚙️ НАСТРОЙКИ (ОБНОВЛЕНО)
+# ⚙️ НАСТРОЙКИ
 # ==========================================
 BOT_TOKEN = os.getenv('DISCORD_TOKEN')
 
@@ -39,10 +41,14 @@ TICKET_CATEGORY_ID = 1477997491659214968
 DEVELOPER_ROLE_ID = 1477952290148192338
 ADMIN_ROLE_ID = 1477952288076201984
 
-# Тикеты стаффа (заявки) ✅ ОБНОВЛЕНО
+# Тикеты стаффа (заявки)
 STAFF_TICKET_CATEGORY_ID = 1478003822352662600
 SUPPORT_ROLE_ID = 1477952291439902791
 MODERATOR_ROLE_ID = 1477952291439902791
+
+# Модерация ✅ НОВОЕ
+MUTE_ROLE_ID = 1477952295869349888
+LOGS_CHANNEL_ID = 1477964505546883184
 
 if not BOT_TOKEN:
     raise ValueError("⚠️ Ошибка: Токен не найден! Проверь файл .env")
@@ -57,9 +63,10 @@ intents.members = True
 bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
 tree = bot.tree
 
-# Файлы для хранения номеров тикетов
+# Файлы для хранения
 TICKET_FILE = "tickets.json"
 STAFF_TICKET_FILE = "staff_tickets.json"
+WARNINGS_FILE = "warnings.json"
 
 def get_ticket_number(file=TICKET_FILE):
     if os.path.exists(file):
@@ -74,6 +81,85 @@ def get_ticket_number(file=TICKET_FILE):
 def save_ticket_number(number, file=TICKET_FILE):
     with open(file, 'w', encoding='utf-8') as f:
         json.dump({'last_ticket': number}, f)
+
+def get_warnings():
+    if os.path.exists(WARNINGS_FILE):
+        with open(WARNINGS_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return {}
+
+def save_warnings(data):
+    with open(WARNINGS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+def add_warning(user_id, moderator, reason):
+    data = get_warnings()
+    if str(user_id) not in data:
+        data[str(user_id)] = []
+    data[str(user_id)].append({
+        'moderator': moderator,
+        'reason': reason,
+        'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    })
+    save_warnings(data)
+    return len(data[str(user_id)])
+
+def get_user_warnings(user_id):
+    data = get_warnings()
+    return data.get(str(user_id), [])
+
+def clear_warnings(user_id):
+    data = get_warnings()
+    if str(user_id) in data:
+        del data[str(user_id)]
+        save_warnings(data)
+
+# ==========================================
+# 📋 ЛОГИРОВАНИЕ
+# ==========================================
+
+async def log_action(guild, action_type, moderator, target, reason=None, duration=None):
+    """Запись действия в лог-канал"""
+    channel = discord.utils.get(guild.channels, id=LOGS_CHANNEL_ID)
+    if not channel:
+        return
+    
+    color_map = {
+        'ban': NeonColors.RED,
+        'kick': NeonColors.ORANGE,
+        'mute': NeonColors.GRAY,
+        'unmute': NeonColors.GREEN,
+        'warn': NeonColors.YELLOW,
+        'clear_warn': NeonColors.BLUE
+    }
+    
+    emoji_map = {
+        'ban': '🔨',
+        'kick': '👢',
+        'mute': '🔇',
+        'unmute': '🔊',
+        'warn': '⚠️',
+        'clear_warn': '✅'
+    }
+    
+    embed = discord.Embed(
+        title=f"{emoji_map.get(action_type, '📝')} {action_type.upper()}",
+        color=color_map.get(action_type, NeonColors.PURPLE),
+        timestamp=datetime.utcnow()
+    )
+    
+    embed.add_field(name="👤 **Модератор**", value=f"{moderator.mention} (`{moderator.id}`)", inline=True)
+    embed.add_field(name="🎯 **Пользователь**", value=f"{target.mention} (`{target.id}`)", inline=True)
+    if duration:
+        embed.add_field(name="⏱ **Длительность**", value=duration, inline=True)
+    
+    if reason:
+        embed.add_field(name="📄 **Причина**", value=f"```{reason}```", inline=False)
+    
+    embed.set_footer(text=f"NeonSyntax | DevStudio • Лог действий")
+    embed.set_thumbnail(url=target.avatar.url if target.avatar else None)
+    
+    await channel.send(embed=embed)
 
 # ==========================================
 # 🎨 ШАБЛОНЫ EMBED
@@ -148,26 +234,10 @@ def create_price_embed():
         color=NeonColors.GOLD,
         timestamp=datetime.utcnow()
     )
-    embed.add_field(
-        name="🥉 **Простые боты**", 
-        value="**от 5,000₽**\n• Простые команды\n• Приветствия\n• Базовая модерация\n• Срок: 3-7 дней", 
-        inline=True
-    )
-    embed.add_field(
-        name="🥈 **Средней сложности**", 
-        value="**от 15,000₽**\n• Экономика сервера\n• Система тикетов\n• Интеграции API\n• Срок: 7-14 дней", 
-        inline=True
-    )
-    embed.add_field(
-        name="🥇 **Сложные проекты**", 
-        value="**от 30,000₽**\n• Магазины с оплатой\n• Сложные системы\n• База данных\n• Срок: 14-30 дней", 
-        inline=True
-    )
-    embed.add_field(
-        name="📞 **Связь**", 
-        value="Telegram: `@твой_ник`\nDiscord: `ТвойНик#0000`\nEmail: `info@neonsyntax.ru`", 
-        inline=False
-    )
+    embed.add_field(name="🥉 **Простые боты**", value="**от 5,000₽**\n• Простые команды\n• Приветствия\n• Базовая модерация\n• Срок: 3-7 дней", inline=True)
+    embed.add_field(name="🥈 **Средней сложности**", value="**от 15,000₽**\n• Экономика сервера\n• Система тикетов\n• Интеграции API\n• Срок: 7-14 дней", inline=True)
+    embed.add_field(name="🥇 **Сложные проекты**", value="**от 30,000₽**\n• Магазины с оплатой\n• Сложные системы\n• База данных\n• Срок: 14-30 дней", inline=True)
+    embed.add_field(name="📞 **Связь**", value="Telegram: `@твой_ник`\nDiscord: `ТвойНик#0000`\nEmail: `info@neonsyntax.ru`", inline=False)
     embed.set_footer(text="💳 Предоплата 50% • Рассрочка возможна")
     return embed
 
@@ -201,7 +271,6 @@ def create_contact_embed():
 # ==========================================
 
 class CloseTicketView(View):
-    """Кнопка закрытия тикета"""
     def __init__(self):
         super().__init__(timeout=None)
 
@@ -235,7 +304,6 @@ class CloseTicketView(View):
 
 
 class TicketTypeSelect(View):
-    """Выбор типа заказа"""
     def __init__(self, author):
         super().__init__(timeout=None)
         self.author = author
@@ -284,7 +352,6 @@ class TicketTypeSelect(View):
 
 
 class StaffPositionSelect(View):
-    """Выбор позиции в стафф"""
     def __init__(self, author):
         super().__init__(timeout=None)
         self.author = author
@@ -338,7 +405,6 @@ class StaffPositionSelect(View):
 
 
 class TicketPanelView(View):
-    """Панель заказов"""
     def __init__(self):
         super().__init__(timeout=None)
 
@@ -350,7 +416,6 @@ class TicketPanelView(View):
 
 
 class StaffPanelView(View):
-    """Панель заявок в стафф"""
     def __init__(self):
         super().__init__(timeout=None)
 
@@ -402,7 +467,7 @@ async def slash_help(interaction: discord.Interaction):
     embed = discord.Embed(title="❓ **Помощь**", description="**Команды**", color=NeonColors.PURPLE, timestamp=datetime.utcnow())
     embed.add_field(name="🔹 **Заказы**", value="`/ticket` — Панель заказов\n`/start` — Главная\n`/price` — Прайс", inline=True)
     embed.add_field(name="🔸 **Стафф**", value="`/staff` — Панель заявок\n`/help` — Это меню", inline=True)
-    embed.add_field(name="🔹 **Общее**", value="`/contact` — Контакты\n`!команда` — Префикс", inline=True)
+    embed.add_field(name="🔹 **Модерация**", value="`/ban` — Бан\n`/kick` — Кик\n`/mute` — Мут\n`/warn` — Предупреждение", inline=True)
     await interaction.response.send_message(embed=embed)
 
 @tree.command(name="ticket", description="📩 Панель заказов (Админ)", guild=discord.Object(id=GUILD_ID))
@@ -420,6 +485,251 @@ async def slash_staff(interaction: discord.Interaction):
         await interaction.response.send_message(embed=embed, ephemeral=True)
         return
     await interaction.response.send_message(embed=create_staff_panel_embed(), view=StaffPanelView())
+
+# ==========================================
+# 🔨 МОДЕРАЦИЯ
+# ==========================================
+
+def check_moderator(member):
+    """Проверка прав модератора"""
+    return any(role.id in [ADMIN_ROLE_ID, MODERATOR_ROLE_ID] for role in member.roles)
+
+@tree.command(name="ban", description="🔨 Забанить пользователя", guild=discord.Object(id=GUILD_ID))
+@app_commands.describe(user="Пользователь для бана", reason="Причина бана")
+async def slash_ban(interaction: discord.Interaction, user: discord.Member, reason: str = "Не указана"):
+    if not check_moderator(interaction.user):
+        embed = discord.Embed(title="❌ **Нет доступа**", description="Только для Модераторов и Админов!", color=NeonColors.RED, timestamp=datetime.utcnow())
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
+    
+    if user == interaction.user:
+        embed = discord.Embed(title="❌ **Ошибка**", description="Нельзя забанить себя!", color=NeonColors.RED, timestamp=datetime.utcnow())
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
+    
+    if user.top_role.position >= interaction.user.top_role.position:
+        embed = discord.Embed(title="❌ **Ошибка**", description="Нельзя банить пользователя с ролью выше или равной вашей!", color=NeonColors.RED, timestamp=datetime.utcnow())
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
+    
+    try:
+        await user.ban(reason=reason)
+        embed = discord.Embed(title="✅ **Пользователь забанен**", description=f"{user.mention} забанен.", color=NeonColors.GREEN, timestamp=datetime.utcnow())
+        await interaction.response.send_message(embed=embed)
+        await log_action(interaction.guild, 'ban', interaction.user, user, reason)
+    except Exception as e:
+        embed = discord.Embed(title="❌ **Ошибка**", description=f"Не удалось забанить: {e}", color=NeonColors.RED, timestamp=datetime.utcnow())
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+@tree.command(name="kick", description="👢 Кикнуть пользователя", guild=discord.Object(id=GUILD_ID))
+@app_commands.describe(user="Пользователь для кика", reason="Причина кика")
+async def slash_kick(interaction: discord.Interaction, user: discord.Member, reason: str = "Не указана"):
+    if not check_moderator(interaction.user):
+        embed = discord.Embed(title="❌ **Нет доступа**", description="Только для Модераторов и Админов!", color=NeonColors.RED, timestamp=datetime.utcnow())
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
+    
+    if user == interaction.user:
+        embed = discord.Embed(title="❌ **Ошибка**", description="Нельзя кикнуть себя!", color=NeonColors.RED, timestamp=datetime.utcnow())
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
+    
+    if user.top_role.position >= interaction.user.top_role.position:
+        embed = discord.Embed(title="❌ **Ошибка**", description="Нельзя кикнуть пользователя с ролью выше или равной вашей!", color=NeonColors.RED, timestamp=datetime.utcnow())
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
+    
+    try:
+        await user.kick(reason=reason)
+        embed = discord.Embed(title="✅ **Пользователь кикнут**", description=f"{user.mention} кикнут.", color=NeonColors.GREEN, timestamp=datetime.utcnow())
+        await interaction.response.send_message(embed=embed)
+        await log_action(interaction.guild, 'kick', interaction.user, user, reason)
+    except Exception as e:
+        embed = discord.Embed(title="❌ **Ошибка**", description=f"Не удалось кикнуть: {e}", color=NeonColors.RED, timestamp=datetime.utcnow())
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+@tree.command(name="mute", description="🔇 Выдать мут пользователю", guild=discord.Object(id=GUILD_ID))
+@app_commands.describe(user="Пользователь для мута", duration="Длительность (минуты)", reason="Причина мута")
+async def slash_mute(interaction: discord.Interaction, user: discord.Member, duration: int, reason: str = "Не указана"):
+    if not check_moderator(interaction.user):
+        embed = discord.Embed(title="❌ **Нет доступа**", description="Только для Модераторов и Админов!", color=NeonColors.RED, timestamp=datetime.utcnow())
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
+    
+    mute_role = discord.utils.get(interaction.guild.roles, id=MUTE_ROLE_ID)
+    if not mute_role:
+        embed = discord.Embed(title="❌ **Ошибка**", description="Роль мута не найдена!", color=NeonColors.RED, timestamp=datetime.utcnow())
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
+    
+    if mute_role in user.roles:
+        embed = discord.Embed(title="❌ **Ошибка**", description="Пользователь уже замьючен!", color=NeonColors.RED, timestamp=datetime.utcnow())
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
+    
+    try:
+        await user.add_roles(mute_role, reason=reason)
+        embed = discord.Embed(title="✅ **Пользователь замьючен**", description=f"{user.mention} получил мут на {duration} мин.", color=NeonColors.GREEN, timestamp=datetime.utcnow())
+        await interaction.response.send_message(embed=embed)
+        await log_action(interaction.guild, 'mute', interaction.user, user, reason, f"{duration} мин.")
+        
+        # Автоматическое снятие мута
+        await asyncio.sleep(duration * 60)
+        if mute_role in user.roles:
+            await user.remove_roles(mute_role, reason="Мут истёк")
+            await log_action(interaction.guild, 'unmute', interaction.guild.me, user, "Мут истёк")
+    except Exception as e:
+        embed = discord.Embed(title="❌ **Ошибка**", description=f"Не удалось выдать мут: {e}", color=NeonColors.RED, timestamp=datetime.utcnow())
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+@tree.command(name="unmute", description="🔊 Снять мут с пользователя", guild=discord.Object(id=GUILD_ID))
+@app_commands.describe(user="Пользователь для снятия мута")
+async def slash_unmute(interaction: discord.Interaction, user: discord.Member):
+    if not check_moderator(interaction.user):
+        embed = discord.Embed(title="❌ **Нет доступа**", description="Только для Модераторов и Админов!", color=NeonColors.RED, timestamp=datetime.utcnow())
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
+    
+    mute_role = discord.utils.get(interaction.guild.roles, id=MUTE_ROLE_ID)
+    if not mute_role:
+        embed = discord.Embed(title="❌ **Ошибка**", description="Роль мута не найдена!", color=NeonColors.RED, timestamp=datetime.utcnow())
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
+    
+    if mute_role not in user.roles:
+        embed = discord.Embed(title="❌ **Ошибка**", description="Пользователь не имеет мута!", color=NeonColors.RED, timestamp=datetime.utcnow())
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
+    
+    try:
+        await user.remove_roles(mute_role)
+        embed = discord.Embed(title="✅ **Мут снят**", description=f"{user.mention} теперь может говорить.", color=NeonColors.GREEN, timestamp=datetime.utcnow())
+        await interaction.response.send_message(embed=embed)
+        await log_action(interaction.guild, 'unmute', interaction.user, user, "По команде модератора")
+    except Exception as e:
+        embed = discord.Embed(title="❌ **Ошибка**", description=f"Не удалось снять мут: {e}", color=NeonColors.RED, timestamp=datetime.utcnow())
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+@tree.command(name="warn", description="⚠️ Выдать предупреждение", guild=discord.Object(id=GUILD_ID))
+@app_commands.describe(user="Пользователь для предупреждения", reason="Причина предупреждения")
+async def slash_warn(interaction: discord.Interaction, user: discord.Member, reason: str = "Не указана"):
+    if not check_moderator(interaction.user):
+        embed = discord.Embed(title="❌ **Нет доступа**", description="Только для Модераторов и Админов!", color=NeonColors.RED, timestamp=datetime.utcnow())
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
+    
+    warn_count = add_warning(user.id, interaction.user.name, reason)
+    
+    embed = discord.Embed(title="✅ **Предупреждение выдано**", description=f"{user.mention} получил предупреждение.", color=NeonColors.YELLOW, timestamp=datetime.utcnow())
+    embed.add_field(name="📊 **Всего предупреждений**", value=f"**{warn_count}**", inline=True)
+    await interaction.response.send_message(embed=embed)
+    await log_action(interaction.guild, 'warn', interaction.user, user, reason)
+
+@tree.command(name="warnings", description="📋 Показать предупреждения пользователя", guild=discord.Object(id=GUILD_ID))
+@app_commands.describe(user="Пользователь для проверки")
+async def slash_warnings(interaction: discord.Interaction, user: discord.Member):
+    warnings = get_user_warnings(user.id)
+    
+    if not warnings:
+        embed = discord.Embed(title="📋 **Предупреждения**", description=f"У {user.mention} нет предупреждений.", color=NeonColors.BLUE, timestamp=datetime.utcnow())
+        await interaction.response.send_message(embed=embed)
+        return
+    
+    embed = discord.Embed(title="📋 **Предупреждения**", description=f"У {user.mention} **{len(warnings)}** предупреждений.", color=NeonColors.YELLOW, timestamp=datetime.utcnow())
+    
+    for i, warn in enumerate(warnings, 1):
+        embed.add_field(name=f"⚠️ **Предупреждение #{i}**", value=f"**Модератор:** {warn['moderator']}\n**Причина:** {warn['reason']}\n**Дата:** {warn['date']}", inline=False)
+    
+    await interaction.response.send_message(embed=embed)
+
+@tree.command(name="clearwarnings", description="✅ Очистить предупреждения пользователя", guild=discord.Object(id=GUILD_ID))
+@app_commands.describe(user="Пользователь для очистки")
+async def slash_clearwarnings(interaction: discord.Interaction, user: discord.Member):
+    if not any(role.id == ADMIN_ROLE_ID for role in interaction.user.roles):
+        embed = discord.Embed(title="❌ **Нет доступа**", description="Только для Админов!", color=NeonColors.RED, timestamp=datetime.utcnow())
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
+    
+    clear_warnings(user.id)
+    embed = discord.Embed(title="✅ **Предупреждения очищены**", description=f"У {user.mention} удалены все предупреждения.", color=NeonColors.GREEN, timestamp=datetime.utcnow())
+    await interaction.response.send_message(embed=embed)
+    await log_action(interaction.guild, 'clear_warn', interaction.user, user, "Очистка предупреждений")
+
+# Префиксные команды модерации
+@bot.command()
+async def ban(ctx, user: discord.Member, *, reason="Не указана"):
+    if not check_moderator(ctx.author):
+        await ctx.send(embed=discord.Embed(title="❌ **Нет доступа**", color=NeonColors.RED))
+        return
+    try:
+        await user.ban(reason=reason)
+        await ctx.send(embed=discord.Embed(title="✅ **Забанен**", description=f"{user.mention}", color=NeonColors.GREEN))
+        await log_action(ctx.guild, 'ban', ctx.author, user, reason)
+    except Exception as e:
+        await ctx.send(embed=discord.Embed(title="❌ **Ошибка**", description=str(e), color=NeonColors.RED))
+
+@bot.command()
+async def kick(ctx, user: discord.Member, *, reason="Не указана"):
+    if not check_moderator(ctx.author):
+        await ctx.send(embed=discord.Embed(title="❌ **Нет доступа**", color=NeonColors.RED))
+        return
+    try:
+        await user.kick(reason=reason)
+        await ctx.send(embed=discord.Embed(title="✅ **Кикнут**", description=f"{user.mention}", color=NeonColors.GREEN))
+        await log_action(ctx.guild, 'kick', ctx.author, user, reason)
+    except Exception as e:
+        await ctx.send(embed=discord.Embed(title="❌ **Ошибка**", description=str(e), color=NeonColors.RED))
+
+@bot.command()
+async def mute(ctx, user: discord.Member, duration: int, *, reason="Не указана"):
+    if not check_moderator(ctx.author):
+        await ctx.send(embed=discord.Embed(title="❌ **Нет доступа**", color=NeonColors.RED))
+        return
+    mute_role = discord.utils.get(ctx.guild.roles, id=MUTE_ROLE_ID)
+    if mute_role:
+        await user.add_roles(mute_role)
+        await ctx.send(embed=discord.Embed(title="✅ **Замьючен**", description=f"{user.mention} на {duration} мин.", color=NeonColors.GREEN))
+        await log_action(ctx.guild, 'mute', ctx.author, user, reason, f"{duration} мин.")
+
+@bot.command()
+async def unmute(ctx, user: discord.Member):
+    if not check_moderator(ctx.author):
+        await ctx.send(embed=discord.Embed(title="❌ **Нет доступа**", color=NeonColors.RED))
+        return
+    mute_role = discord.utils.get(ctx.guild.roles, id=MUTE_ROLE_ID)
+    if mute_role:
+        await user.remove_roles(mute_role)
+        await ctx.send(embed=discord.Embed(title="✅ **Мут снят**", description=f"{user.mention}", color=NeonColors.GREEN))
+        await log_action(ctx.guild, 'unmute', ctx.author, user, "По команде")
+
+@bot.command()
+async def warn(ctx, user: discord.Member, *, reason="Не указана"):
+    if not check_moderator(ctx.author):
+        await ctx.send(embed=discord.Embed(title="❌ **Нет доступа**", color=NeonColors.RED))
+        return
+    warn_count = add_warning(user.id, ctx.author.name, reason)
+    await ctx.send(embed=discord.Embed(title="✅ **Предупреждение**", description=f"{user.mention} ({warn_count} всего)", color=NeonColors.YELLOW))
+    await log_action(ctx.guild, 'warn', ctx.author, user, reason)
+
+@bot.command()
+async def warnings(ctx, user: discord.Member):
+    warnings = get_user_warnings(user.id)
+    if not warnings:
+        await ctx.send(embed=discord.Embed(title="📋 **Предупреждения**", description=f"У {user.mention} нет предупреждений.", color=NeonColors.BLUE))
+        return
+    embed = discord.Embed(title="📋 **Предупреждения**", description=f"У {user.mention} **{len(warnings)}** предупреждений.", color=NeonColors.YELLOW)
+    for i, warn in enumerate(warnings, 1):
+        embed.add_field(name=f"⚠️ #{i}", value=f"{warn['moderator']}: {warn['reason']}", inline=False)
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def clearwarnings(ctx, user: discord.Member):
+    if not any(role.id == ADMIN_ROLE_ID for role in ctx.author.roles):
+        await ctx.send(embed=discord.Embed(title="❌ **Нет доступа**", color=NeonColors.RED))
+        return
+    clear_warnings(user.id)
+    await ctx.send(embed=discord.Embed(title="✅ **Очищено**", description=f"У {user.mention} удалены все предупреждения.", color=NeonColors.GREEN))
+    await log_action(ctx.guild, 'clear_warn', ctx.author, user, "Очистка")
 
 @bot.command()
 async def ticket(ctx):
@@ -442,7 +752,7 @@ async def price(ctx): await ctx.send(embed=create_price_embed())
 @bot.command()
 async def contact(ctx): await ctx.send(embed=create_contact_embed())
 @bot.command()
-async def help(ctx): await ctx.send(embed=discord.Embed(title="❓ **Помощь**", color=NeonColors.PURPLE, description="`/ticket`, `/staff`, `/start`, `/price`"))
+async def help(ctx): await ctx.send(embed=discord.Embed(title="❓ **Помощь**", color=NeonColors.PURPLE, description="`/ticket`, `/staff`, `/ban`, `/kick`, `/mute`, `/warn`"))
 
 # ==========================================
 # 🚀 ЗАПУСК
@@ -464,5 +774,7 @@ async def on_ready():
     print(f'🎨 NeonSyntax | DevStudio: Активирован')
     print(f'📩 Система заказов: Готова')
     print(f'🛡️ Система стаффа: Готова')
+    print(f'🔨 Система модерации: Готова')
+    print(f'📋 Система логов: Готова')
 
 bot.run(BOT_TOKEN)
