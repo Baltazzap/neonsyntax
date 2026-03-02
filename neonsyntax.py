@@ -1,35 +1,31 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-import asyncio
 import os
 
 # ==========================================
 # НАСТРОЙКИ (ЗАПОЛНИ ЭТО ПЕРЕД ЗАПУСКОМ)
 # ==========================================
-BOT_TOKEN = os.getenv('DISCORD_TOKEN')  # Вставь токен из Discord Developer Portal
-GUILD_ID = 1477952025034752070        # ID твоего сервера (включи режим разработчика в Discord, нажми ПКМ на сервер -> Копировать ID)
-WELCOME_ROLE_ID = 1477952294984224809 # ID роли, которую нужно выдавать (например, "Участник")
-WELCOME_CHANNEL_ID = 1477955639937466531 # ID канала, куда писать приветствие (например, "general" или "chat")
+BOT_TOKEN = os.getenv('DISCORD_TOKEN') 
+GUILD_ID = 123456789012345678        # ID твоего сервера
+WELCOME_ROLE_ID = 987654321098765432 # ID роли для выдачи
+WELCOME_CHANNEL_ID = 111111111111111 # ID канала для приветствия
 # ==========================================
 
-# Настройка интентов (разрешений)
+# Настройка интентов
 intents = discord.Intents.default()
-intents.message_content = True  # Нужно для работы команд с префиксом !
-intents.members = True          # Нужно для выдачи ролей при входе
+intents.message_content = True  # Обязательно для префиксных команд (!)
+intents.members = True          # Обязательно для выдачи ролей при входе
 
-# Инициализация клиента
-client = discord.Client(intents=intents)
-tree = app_commands.CommandTree(client)
-
-# Префикс для обычных команд
-PREFIX = "!"
+# ИСПРАВЛЕНИЕ: Используем commands.Bot вместо discord.Client
+bot = commands.Bot(command_prefix='!', intents=intents)
+tree = bot.tree
 
 # ==========================================
 # СИСТЕМА 1: АВТО ПРИВЕТСТВИЕ И АВТО РОЛЬ
 # ==========================================
 
-@client.event
+@bot.event
 async def on_member_join(member):
     """Срабатывает, когда кто-то заходит на сервер"""
     
@@ -48,7 +44,6 @@ async def on_member_join(member):
     try:
         channel = discord.utils.get(member.guild.channels, id=WELCOME_CHANNEL_ID)
         if channel:
-            # Создаем красивое сообщение (Embed)
             embed = discord.Embed(
                 title=f"👋 Добро пожаловать, {member.name}!",
                 description="Рады видеть тебя на нашем сервере услуг разработки.",
@@ -75,7 +70,7 @@ async def slash_start(interaction: discord.Interaction):
     embed = discord.Embed(title="🚀 Разработка Ботов Discord & Telegram", color=discord.Color.green())
     embed.description = "Привет! Я бот-портфолио. Мы разрабатываем сложные системы, магазины, модерацию и многое другое."
     embed.add_field(name="💼 Наши услуги", value="• Discord Боты (Python/JS)\n• Telegram Боты (Aiogram/Pyrogram)\n• Парсеры и Скрипты", inline=False)
-    embed.set_thumbnail(url=interaction.client.user.avatar.url)
+    embed.set_thumbnail(url=bot.user.avatar.url if bot.user.avatar else None)
     await interaction.response.send_message(embed=embed)
 
 @tree.command(name="price", description="Узнать стоимость разработки", guild=discord.Object(id=GUILD_ID))
@@ -101,12 +96,13 @@ async def slash_help(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed)
 
 # --- Префиксные команды (!) ---
+# Теперь используем @bot.command(), так как bot это commands.Bot
 
-@client.command()
+@bot.command()
 async def start(ctx):
     await ctx.send("🚀 **Разработка Ботов Discord & Telegram**\nМы создаем крутые проекты. Используй /start для красивого меню или пиши в ЛС разработчику.")
 
-@client.command()
+@bot.command()
 async def price(ctx):
     embed = discord.Embed(title="💰 Прайс-лист", color=discord.Color.gold())
     embed.add_field(name="Простой бот", value="от 1000₽", inline=True)
@@ -114,11 +110,11 @@ async def price(ctx):
     embed.add_field(name="Сложный проект", value="от 10000₽", inline=True)
     await ctx.send(embed=embed)
 
-@client.command()
+@bot.command()
 async def contact(ctx):
     await ctx.send("📞 **Связь:**\nTelegram: @твой_ник\nDiscord: ТвойНик#0000")
 
-@client.command()
+@bot.command()
 async def help(ctx):
     await ctx.send("❓ **Список команд:**\n`!start`, `!price`, `!contact`, `!help`\nТакже работают слэш команды: `/start`, `/price` и т.д.")
 
@@ -126,7 +122,7 @@ async def help(ctx):
 # ЗАПУСК
 # ==========================================
 
-@client.event
+@bot.event
 async def on_ready():
     # Синхронизация слэш-команд с сервером
     try:
@@ -135,8 +131,8 @@ async def on_ready():
     except Exception as e:
         print(f"Ошибка синхронизации: {e}")
 
-    print(f'Бот успешно запущен как {client.user}')
-    print(f'ID Бота: {client.user.id}')
+    print(f'Бот успешно запущен как {bot.user}')
+    print(f'ID Бота: {bot.user.id}')
 
 # Запуск бота
-client.run(BOT_TOKEN)
+bot.run(BOT_TOKEN)
