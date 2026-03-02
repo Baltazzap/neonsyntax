@@ -20,6 +20,27 @@ from pathlib import Path
 from typing import Optional
 
 # ============================================
+# 🔷 ПРОВЕРКА КОНФИГУРАЦИИ 🔷
+# ============================================
+
+print("🔍 Проверка конфигурации...")
+print(f"TOKEN: {'✅' if TOKEN and len(TOKEN) > 50 else '❌'}")
+print(f"GUILD_ID: {'✅' if GUILD_ID > 0 else '❌'} ({GUILD_ID})")
+print(f"OWNER_ID: {'✅' if OWNER_ID > 0 else '❌'} ({OWNER_ID})")
+print(f"WELCOME_CHANNEL: {'✅' if WELCOME_CHANNEL > 0 else '❌'}")
+print(f"LOG_CHANNEL: {'✅' if LOG_CHANNEL > 0 else '❌'}")
+print(f"AUTO_ROLE: {'✅' if AUTO_ROLE > 0 else '❌'}")
+print(f"MUTE_ROLE: {'✅' if MUTE_ROLE > 0 else '❌'}")
+
+if not TOKEN or len(TOKEN) < 50:
+    print("❌ ОШИБКА: Неверный токен бота!")
+    exit(1)
+
+if GUILD_ID == 0:
+    print("❌ ОШИБКА: GUILD_ID не настроен!")
+    exit(1)
+
+# ============================================
 # 🔷 ЗАГРУЗКА КОНФИГУРАЦИИ 🔷
 # ============================================
 
@@ -158,11 +179,39 @@ async def on_ready():
     logger.info(f'✅ {bot.user} успешно запущен!')
     logger.info(f'📊 Серверов: {len(bot.guilds)}')
     
+    # Проверка доступа к серверу
+    guild = bot.get_guild(GUILD_ID)
+    if guild:
+        logger.info(f"✅ Доступ к серверу: {guild.name}")
+        logger.info(f"👥 Участников: {guild.member_count}")
+        
+        # Проверка прав бота
+        bot_member = guild.get_member(bot.user.id)
+        if bot_member:
+            perms = bot_member.guild_permissions
+            logger.info(f"🔨 Admin: {perms.administrator}")
+            logger.info(f"📝 Manage Channels: {perms.manage_channels}")
+            logger.info(f"🎭 Manage Roles: {perms.manage_roles}")
+    else:
+        logger.error(f"❌ НЕТ ДОСТУПА к серверу ID: {GUILD_ID}")
+        logger.error("📋 Проверьте:")
+        logger.error("  1. Бот добавлен на сервер?")
+        logger.error("  2. Правильный GUILD_ID в .env?")
+        logger.error("  3. Бот не забанен?")
+    
+    # Синхронизация команд (только если есть доступ)
     try:
-        synced = await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
-        logger.info(f"🔄 Синхронизировано {len(synced)} команд")
+        if guild:
+            synced = await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
+            logger.info(f"🔄 Синхронизировано {len(synced)} команд")
+        else:
+            logger.warning("⚠️ Пропуск синхронизации - нет доступа к серверу")
     except Exception as e:
-        logger.error(f"Ошибка синхронизации: {e}")
+        logger.error(f"❌ Ошибка синхронизации: {e}")
+        logger.error("📋 Попробуйте:")
+        logger.error("  1. Перепригласить бота с правами Administrator")
+        logger.error("  2. Проверить GUILD_ID в .env")
+        logger.error("  3. Убедиться что бот на сервере")
     
     update_stats.start()
     check_mutes.start()
