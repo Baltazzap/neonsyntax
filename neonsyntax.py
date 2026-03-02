@@ -20,7 +20,7 @@ class NeonColors:
     RED = 0xFF1493         # Ошибки / Закрытие
     GOLD = 0xFFD700        # Прайс
     CYAN = 0x00FFFF        # Тикеты заказов
-    ORANGE = 0xFFA500      # Стафф тикеты
+    ORANGE = 0xFFA500      # Стафф тикеты (цвет embed)
     WHITE = 0xFFFFFF
     DARK = 0x0D0D0D
 
@@ -40,9 +40,9 @@ DEVELOPER_ROLE_ID = 1477952290148192338
 ADMIN_ROLE_ID = 1477952288076201984
 
 # Тикеты стаффа (заявки)
-STAFF_TICKET_CATEGORY_ID = 1477997491659214968  # ID категории для заявок в стафф
-SUPPORT_ROLE_ID = 1477952291439902791          # ID роли "Поддержка"
-MODERATOR_ROLE_ID = 1477952288076201984        # ID роли "Модератор"
+STAFF_TICKET_CATEGORY_ID = 1478003822352662600  # ✅ Создай категорию "Заявки в стафф"
+SUPPORT_ROLE_ID = 1477952291439902791          # ✅ Создай роль "Поддержка"
+MODERATOR_ROLE_ID = 1477952291439902791        # ✅ Создай роль "Модератор"
 
 if not BOT_TOKEN:
     raise ValueError("⚠️ Ошибка: Токен не найден! Проверь файл .env")
@@ -337,7 +337,8 @@ class StaffPanelView(View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="🛡️ Подать заявку", style=discord.ButtonStyle.orange, custom_id="create_staff_panel", emoji="🛡️")
+    # ✅ ИСПРАВЛЕНО: ButtonStyle.red вместо ButtonStyle.orange
+    @discord.ui.button(label="🛡️ Подать заявку", style=discord.ButtonStyle.red, custom_id="create_staff_panel", emoji="🛡️")
     async def create_staff_btn(self, interaction: discord.Interaction, button: Button):
         view = StaffPositionSelect(interaction.user)
         embed = discord.Embed(title="🎯 **Выберите позицию**", description="На какую позицию вы подаёте?", color=NeonColors.ORANGE, timestamp=datetime.utcnow())
