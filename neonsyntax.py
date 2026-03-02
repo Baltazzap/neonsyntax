@@ -1,7 +1,7 @@
 # ============================================
 # 🌆 NEONSYNTAX BOT - Discord Moderation Bot
 # ============================================
-# Version: 3.0.0
+# Version: 3.0.1
 # Author: NeonSyntax Team
 # Description: Полный код бота со всеми функциями
 # ============================================
@@ -9,7 +9,7 @@
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
-from discord.ui import Button, View, Modal, TextInput, Select
+from discord.ui import Button, View, Modal, TextInput
 from dotenv import load_dotenv
 import asyncio
 import datetime
@@ -41,7 +41,7 @@ STATS_CHANNEL = int(os.getenv('1477964455555104768', 0))
 # ID ролей
 AUTO_ROLE = int(os.getenv('1477952294984224809', 0))
 MUTE_ROLE = int(os.getenv('1477952295869349888', 0))
-STAFF_ROLE = int(os.getenv('1477952123219218546', 0))
+STAFF_ROLE = int(os.getenv('1477952291439902791', 0))
 ADMIN_ROLE = int(os.getenv('1477952288076201984', 0))
 
 # Настройки анти-спама
@@ -463,7 +463,7 @@ async def help_cmd(interaction: discord.Interaction):
         inline=False
     )
     
-    embed.set_footer(text="NeonSyntax Bot v3.0.0")
+    embed.set_footer(text="NeonSyntax Bot v3.0.1")
     await interaction.response.send_message(embed=embed)
 
 # ============================================
@@ -504,21 +504,21 @@ class TicketModal(Modal):
         embed.add_field(name="📝 Описание", value=self.description.value[:1000], inline=False)
         
         view = View()
-        view.add_item(Button(label="🔒 Закрыть", style=discord.ButtonStyle.red, custom_id="close_ticket"))
+        view.add_item(Button(label="🔒 Закрыть", style=discord.ButtonStyle.danger, custom_id="close_ticket"))
         
         await channel.send(embed=embed, view=view)
         await interaction.response.send_message(f"✅ Тикет: {channel.mention}", ephemeral=True)
 
 class TicketPanel(View):
-    @discord.ui.button(label="📝 Заказ", style=discord.ButtonStyle.green, custom_id="ticket_order")
+    @discord.ui.button(label="📝 Заказ", style=discord.ButtonStyle.success, custom_id="ticket_order")
     async def order(self, interaction: discord.Interaction, button: Button):
         await interaction.response.send_modal(TicketModal("Заказ"))
     
-    @discord.ui.button(label="🐛 Баг", style=discord.ButtonStyle.red, custom_id="ticket_bug")
+    @discord.ui.button(label="🐛 Баг", style=discord.ButtonStyle.danger, custom_id="ticket_bug")
     async def bug(self, interaction: discord.Interaction, button: Button):
         await interaction.response.send_modal(TicketModal("Баг"))
     
-    @discord.ui.button(label="💬 Поддержка", style=discord.ButtonStyle.blue, custom_id="ticket_support")
+    @discord.ui.button(label="💬 Поддержка", style=discord.ButtonStyle.primary, custom_id="ticket_support")
     async def support(self, interaction: discord.Interaction, button: Button):
         await interaction.response.send_modal(TicketModal("Поддержка"))
 
@@ -586,14 +586,14 @@ class StaffAppModal(Modal):
         channel = interaction.guild.get_channel(STAFF_APP_CHANNEL)
         if channel:
             view = View()
-            view.add_item(Button(label="✅ Принять", style=discord.ButtonStyle.green, custom_id="accept_staff"))
-            view.add_item(Button(label="❌ Отклонить", style=discord.ButtonStyle.red, custom_id="reject_staff"))
+            view.add_item(Button(label="✅ Принять", style=discord.ButtonStyle.success, custom_id="accept_staff"))
+            view.add_item(Button(label="❌ Отклонить", style=discord.ButtonStyle.danger, custom_id="reject_staff"))
             await channel.send(embed=embed, view=view)
         
         await interaction.response.send_message("✅ Заявка отправлена!", ephemeral=True)
 
 class StaffAppView(View):
-    @discord.ui.button(label="📝 Подать заявку", style=discord.ButtonStyle.green, custom_id="staff_app")
+    @discord.ui.button(label="📝 Подать заявку", style=discord.ButtonStyle.success, custom_id="staff_app")
     async def app_button(self, interaction: discord.Interaction, button: Button):
         await interaction.response.send_modal(StaffAppModal())
 
@@ -663,11 +663,11 @@ class EmbedModal(Modal):
         await interaction.response.send_message("✅ Embed отправлен!", ephemeral=True)
 
 class EmbedView(View):
-    @discord.ui.button(label="📄 Embed", style=discord.ButtonStyle.blue, custom_id="embed_msg")
+    @discord.ui.button(label="📄 Embed", style=discord.ButtonStyle.primary, custom_id="embed_msg")
     async def embed_btn(self, interaction: discord.Interaction, button: Button):
         await interaction.response.send_modal(EmbedModal())
     
-    @discord.ui.button(label="💬 Текст", style=discord.ButtonStyle.green, custom_id="text_msg")
+    @discord.ui.button(label="💬 Текст", style=discord.ButtonStyle.success, custom_id="text_msg")
     async def text_btn(self, interaction: discord.Interaction, button: Button):
         class TextModal(Modal):
             def __init__(self):
