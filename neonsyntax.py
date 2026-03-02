@@ -20,12 +20,12 @@ class NeonColors:
     RED = 0xFF1493         # Ошибки / Закрытие
     GOLD = 0xFFD700        # Прайс
     CYAN = 0x00FFFF        # Тикеты заказов
-    ORANGE = 0xFFA500      # Стафф тикеты (цвет embed)
+    ORANGE = 0xFFA500      # Стафф тикеты
     WHITE = 0xFFFFFF
     DARK = 0x0D0D0D
 
 # ==========================================
-# ⚙️ НАСТРОЙКИ
+# ⚙️ НАСТРОЙКИ (ОБНОВЛЕНО)
 # ==========================================
 BOT_TOKEN = os.getenv('DISCORD_TOKEN')
 
@@ -39,10 +39,10 @@ TICKET_CATEGORY_ID = 1477997491659214968
 DEVELOPER_ROLE_ID = 1477952290148192338
 ADMIN_ROLE_ID = 1477952288076201984
 
-# Тикеты стаффа (заявки)
-STAFF_TICKET_CATEGORY_ID = 1478003822352662600  # ✅ Создай категорию "Заявки в стафф"
-SUPPORT_ROLE_ID = 1477952291439902791          # ✅ Создай роль "Поддержка"
-MODERATOR_ROLE_ID = 1477952291439902791        # ✅ Создай роль "Модератор"
+# Тикеты стаффа (заявки) ✅ ОБНОВЛЕНО
+STAFF_TICKET_CATEGORY_ID = 1478003822352662600
+SUPPORT_ROLE_ID = 1477952291439902791
+MODERATOR_ROLE_ID = 1477952291439902791
 
 if not BOT_TOKEN:
     raise ValueError("⚠️ Ошибка: Токен не найден! Проверь файл .env")
@@ -82,13 +82,13 @@ def save_ticket_number(number, file=TICKET_FILE):
 def create_welcome_embed(member):
     embed = discord.Embed(
         title=f"👋 Добро пожаловать, {member.name}!",
-        description="**Рады видеть тебя в NeoSyntax Community!**",
+        description="**Рады видеть тебя в NeonSyntax | DevStudio!**",
         color=NeonColors.BLUE,
         timestamp=datetime.utcnow()
     )
     embed.add_field(name="🤖 **Наши услуги**", value="• **Discord Боты** — модерация, экономика, магазины\n• **Telegram Боты** — рассылки, магазины, интеграции\n• **Парсеры** — сбор данных с сайтов", inline=False)
     embed.add_field(name="🚀 **Быстрый старт**", value="`/start` — Главная\n`/price` — Прайс\n`/ticket` — Заказ\n`/staff` — Заявка в стафф", inline=False)
-    embed.set_footer(text=f"ID: {member.id} • NeoSyntax © {datetime.now().year}")
+    embed.set_footer(text=f"ID: {member.id} • NeonSyntax | DevStudio © {datetime.now().year}")
     return embed
 
 def create_ticket_embed(ticket_number, bot_type, author):
@@ -101,7 +101,7 @@ def create_ticket_embed(ticket_number, bot_type, author):
     embed.add_field(name="📌 **Тип разработки**", value=f"**{bot_type} Бот**", inline=True)
     embed.add_field(name="👤 **Заказчик**", value=f"{author.name}", inline=True)
     embed.add_field(name="🆔 **ID**", value=f"`{author.id}`", inline=True)
-    embed.set_footer(text=f"NeoSyntax Support • #{ticket_number}")
+    embed.set_footer(text=f"NeonSyntax | DevStudio • #{ticket_number}")
     return embed
 
 def create_staff_ticket_embed(ticket_number, position, author):
@@ -115,7 +115,7 @@ def create_staff_ticket_embed(ticket_number, position, author):
     embed.add_field(name="👤 **Заявитель**", value=f"{author.name}", inline=True)
     embed.add_field(name="🆔 **ID**", value=f"`{author.id}`", inline=True)
     embed.add_field(name="📅 **Дата подачи**", value=f"<t:{int(datetime.now().timestamp())}:F>", inline=False)
-    embed.set_footer(text=f"NeoSyntax Staff • #{ticket_number}")
+    embed.set_footer(text=f"NeonSyntax | DevStudio • #{ticket_number}")
     return embed
 
 def create_ticket_panel_embed():
@@ -126,44 +126,61 @@ def create_ticket_panel_embed():
         timestamp=datetime.utcnow()
     )
     embed.add_field(name="💼 **Специализации**", value="• **Discord** — боты для серверов\n• **Telegram** — боты для бизнеса\n• **Web** — парсеры, API", inline=False)
-    embed.set_footer(text="NeoSyntax Development • Заказ услуг")
+    embed.set_footer(text="NeonSyntax | DevStudio • Заказ услуг")
     return embed
 
 def create_staff_panel_embed():
     embed = discord.Embed(
-        title="🛡️ **Заявка в команду NeoSyntax**",
+        title="🛡️ **Заявка в команду NeonSyntax | DevStudio**",
         description="**Хочешь стать частью нашей команды?**\n\nНажми кнопку ниже, чтобы подать заявку на одну из доступных позиций.\n\n⏱ **Время рассмотрения:** 1-7 дней",
         color=NeonColors.ORANGE,
         timestamp=datetime.utcnow()
     )
     embed.add_field(name="📌 **Открытые вакансии**", value="• **🎧 Поддержка** — помощь пользователям\n• **🔨 Модератор** — модерация сервера\n• **💻 Разработчик** — создание ботов", inline=False)
     embed.add_field(name="⭐ **Требования**", value="✅ Активность в Discord\n✅ Опыт работы (для разработчика)\n✅ Грамотная речь\n✅ Возраст 16+", inline=False)
-    embed.set_footer(text="NeoSyntax Development • Набор в стафф")
+    embed.set_footer(text="NeonSyntax | DevStudio • Набор в стафф")
     return embed
 
 def create_price_embed():
     embed = discord.Embed(
         title="💰 **Прайс-лист**",
-        description="**Актуальные цены на разработку**",
+        description="**Актуальные цены на разработку**\n\n⚠️ *Точную цену рассчитаю после обсуждения ТЗ*",
         color=NeonColors.GOLD,
         timestamp=datetime.utcnow()
     )
-    embed.add_field(name="🥉 **Старт**", value="**от 1,500₽**\n• Простые команды\n• Приветствия\n• Срок: 3-5 дней", inline=True)
-    embed.add_field(name="🥈 **Бизнес**", value="**от 5,000₽**\n• Экономика\n• Тикеты\n• Срок: 7-14 дней", inline=True)
-    embed.add_field(name="🥇 **Премиум**", value="**от 15,000₽**\n• Магазины\n• Сложные системы\n• Срок: 14-30 дней", inline=True)
-    embed.set_footer(text="💳 Предоплата 50%")
+    embed.add_field(
+        name="🥉 **Простые боты**", 
+        value="**от 5,000₽**\n• Простые команды\n• Приветствия\n• Базовая модерация\n• Срок: 3-7 дней", 
+        inline=True
+    )
+    embed.add_field(
+        name="🥈 **Средней сложности**", 
+        value="**от 15,000₽**\n• Экономика сервера\n• Система тикетов\n• Интеграции API\n• Срок: 7-14 дней", 
+        inline=True
+    )
+    embed.add_field(
+        name="🥇 **Сложные проекты**", 
+        value="**от 30,000₽**\n• Магазины с оплатой\n• Сложные системы\n• База данных\n• Срок: 14-30 дней", 
+        inline=True
+    )
+    embed.add_field(
+        name="📞 **Связь**", 
+        value="Telegram: `@твой_ник`\nDiscord: `ТвойНик#0000`\nEmail: `info@neonsyntax.ru`", 
+        inline=False
+    )
+    embed.set_footer(text="💳 Предоплата 50% • Рассрочка возможна")
     return embed
 
 def create_start_embed():
     embed = discord.Embed(
-        title="🚀 **NeoSyntax Development**",
-        description="**Профессиональная разработка ботов и автоматизация**",
+        title="🚀 **NeonSyntax | DevStudio**",
+        description="**Профессиональная разработка ботов и автоматизация**\n\nМы создаём цифровые решения для вашего бизнеса с 2021 года.",
         color=NeonColors.PURPLE,
         timestamp=datetime.utcnow()
     )
     embed.add_field(name="📊 **Проекты**", value="• **50+** успешных\n• **30+** клиентов\n• **98%** отзывов", inline=True)
     embed.add_field(name="⚡ **Технологии**", value="• Python 3.11+\n• Discord.py 2.0+\n• Aiogram 3.x", inline=True)
-    embed.set_footer(text="NeoSyntax © 2024")
+    embed.set_footer(text="NeonSyntax | DevStudio © 2024")
     return embed
 
 def create_contact_embed():
@@ -337,7 +354,6 @@ class StaffPanelView(View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    # ✅ ИСПРАВЛЕНО: ButtonStyle.red вместо ButtonStyle.orange
     @discord.ui.button(label="🛡️ Подать заявку", style=discord.ButtonStyle.red, custom_id="create_staff_panel", emoji="🛡️")
     async def create_staff_btn(self, interaction: discord.Interaction, button: Button):
         view = StaffPositionSelect(interaction.user)
@@ -445,7 +461,7 @@ async def on_ready():
     bot.add_view(CloseTicketView())
     
     print(f'✅ Бот запущен: {bot.user}')
-    print(f'🎨 NeoSyntax Style: Активирован')
+    print(f'🎨 NeonSyntax | DevStudio: Активирован')
     print(f'📩 Система заказов: Готова')
     print(f'🛡️ Система стаффа: Готова')
 
