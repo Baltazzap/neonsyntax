@@ -5,7 +5,7 @@ from discord.ui import Button, View, Modal, TextInput
 from dotenv import load_dotenv
 import os
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 import asyncio
 
 # Загрузка токена из .env
@@ -44,16 +44,21 @@ MODERATOR_ROLE_ID = 1477952291439902791
 MUTE_ROLE_ID = 1477952295869349888
 LOGS_CHANNEL_ID = 1477964505546883184
 
-# ID владельца (твой Discord ID)
-OWNER_ID = 314805583788244993
+OWNER_ID = 1477952025034752070
 
-# ID каналов для приветствия
+# ID каналов
 CHANNEL_RULES = 1477955006203428919
 CHANNEL_ORDER = 1477956383520325754
 CHANNEL_PRICE = 1477955733864710255
 CHANNEL_EXTRA = 1477955856279801969
 CHANNEL_PAYMENT = 1477955908536635514
 CHANNEL_GUARANTEE = 1477956108978098246
+
+# Настройки анти-модерации
+ANTI_SPAM_MESSAGES = 5          # Количество сообщений
+ANTI_SPAM_SECONDS = 5           # За какое время
+ANTI_CAPS_PERCENT = 70          # Процент капса
+MUTE_DURATION_MINUTES = 10      # Длительность мута
 
 if not BOT_TOKEN:
     raise ValueError("⚠️ Ошибка: Токен не найден! Проверь файл .env")
@@ -68,9 +73,18 @@ intents.members = True
 bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
 tree = bot.tree
 
+# Файлы
 TICKET_FILE = "tickets.json"
 STAFF_TICKET_FILE = "staff_tickets.json"
 WARNINGS_FILE = "warnings.json"
+VIOLATIONS_FILE = "violations.json"
+
+# Хранилище нарушений в памяти (для скорости)
+violations = {}
+
+# ==========================================
+# 💾 РАБОТА С ФАЙЛАМИ
+# ==========================================
 
 def get_ticket_number(file=TICKET_FILE):
     if os.path.exists(file):
@@ -98,7 +112,7 @@ def save_warnings(data):
 
 def add_warning(user_id, moderator, reason):
     data = get_warnings()
-    if str(user_id) not in data:
+    if str(user_id) not in 
         data[str(user_id)] = []
     data[str(user_id)].append({
         'moderator': moderator,
@@ -114,9 +128,52 @@ def get_user_warnings(user_id):
 
 def clear_warnings(user_id):
     data = get_warnings()
-    if str(user_id) in data:
+    if str(user_id) in 
         del data[str(user_id)]
         save_warnings(data)
+
+def get_violations():
+    global violations
+    if os.path.exists(VIOLATIONS_FILE):
+        with open(VIOLATIONS_FILE, 'r', encoding='utf-8') as f:
+            violations = json.load(f)
+    return violations
+
+def save_violations():
+    global violations
+    with open(VIOLATIONS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(violations, f, ensure_ascii=False, indent=2)
+
+def add_violation(user_id, violation_type):
+    global violations
+    get_violations()
+    now = datetime.now().timestamp()
+    
+    if str(user_id) not in 
+        violations[str(user_id)] = []
+    
+    violations[str(user_id)].append({
+        'type': violation_type,
+        'time': now
+    })
+    
+    # Очищаем старые нарушения (старше 1 часа)
+    violations[str(user_id)] = [v for v in violations[str(user_id)] if now - v['time'] < 3600]
+    
+    save_violations()
+    return len(violations[str(user_id)])
+
+def get_violation_count(user_id):
+    global violations
+    get_violations()
+    now = datetime.now().timestamp()
+    
+    if str(user_id) not in 
+        return 0
+    
+    # Считаем только нарушения за последний час
+    recent = [v for v in violations[str(user_id)] if now - v['time'] < 3600]
+    return len(recent)
 
 # ==========================================
 # 📋 ЛОГИРОВАНИЕ
@@ -134,7 +191,10 @@ async def log_action(guild, action_type, moderator, target, reason=None, duratio
         'unmute': NeonColors.GREEN,
         'warn': NeonColors.YELLOW,
         'clear_warn': NeonColors.BLUE,
-        'embed': NeonColors.PURPLE
+        'embed': NeonColors.PURPLE,
+        'auto_mute': NeonColors.RED,
+        'anti_spam': NeonColors.YELLOW,
+        'anti_caps': NeonColors.YELLOW
     }
     
     emoji_map = {
@@ -144,7 +204,10 @@ async def log_action(guild, action_type, moderator, target, reason=None, duratio
         'unmute': '🔊',
         'warn': '⚠️',
         'clear_warn': '✅',
-        'embed': '📝'
+        'embed': '📝',
+        'auto_mute': '🤖',
+        'anti_spam': '📢',
+        'anti_caps': '🔠'
     }
     
     embed = discord.Embed(
@@ -166,6 +229,125 @@ async def log_action(guild, action_type, moderator, target, reason=None, duratio
     await channel.send(embed=embed)
 
 # ==========================================
+# 🛡️ АНТИ-МОДЕРАЦИЯ
+# ==========================================
+
+async def check_anti_spam(message):
+    """Проверка на спам (быстрые сообщения)"""
+    if message.author.bot:
+        return False
+    
+    # Игнорируем админов и модераторов
+    if any(role.id in [ADMIN_ROLE_ID, MODERATOR_ROLE_ID] for role in message.author.roles):
+        return False
+    
+    user_messages = [m for m in message.channel.history(limit=ANTI_SPAM_MESSAGES + 1) 
+                     if m.author == message.author and (datetime.utcnow() - m.created_at).total_seconds() < ANTI_SPAM_SECONDS]
+    
+    return len(user_messages) >= ANTI_SPAM_MESSAGES
+
+async def check_anti_caps(message):
+    """Проверка на капс (более 70% заглавных букв)"""
+    if message.author.bot or len(message.content) < 10:
+        return False
+    
+    # Игнорируем админов и модераторов
+    if any(role.id in [ADMIN_ROLE_ID, MODERATOR_ROLE_ID] for role in message.author.roles):
+        return False
+    
+    letters = [c for c in message.content if c.isalpha()]
+    if not letters:
+        return False
+    
+    caps = [c for c in letters if c.isupper()]
+    caps_percent = (len(caps) / len(letters)) * 100
+    
+    return caps_percent >= ANTI_CAPS_PERCENT
+
+async def handle_violation(message, violation_type):
+    """Обработка нарушения"""
+    user = message.author
+    count = add_violation(user.id, violation_type)
+    
+    # Удаляем сообщение
+    try:
+        await message.delete()
+    except:
+        pass
+    
+    if count == 1:
+        # Первое нарушение - предупреждение
+        embed = discord.Embed(
+            title="⚠️ **ПРЕДУПРЕЖДЕНИЕ**",
+            description=f"{user.mention}, вы нарушили правила сервера!\n\n**Нарушение:** `{violation_type}`\n\nПожалуйста, соблюдайте правила. При следующем нарушении вы получите **мут на 10 минут**.",
+            color=NeonColors.YELLOW,
+            timestamp=datetime.utcnow()
+        )
+        embed.set_footer(text="NeonSyntax | DevStudio • Автомодерация")
+        
+        warn_msg = await message.channel.send(embed=embed, delete_after=30)
+        
+        await log_action(message.guild, violation_type, message.guild.me, user, f"Предупреждение #{count}")
+        
+    elif count >= 2:
+        # Второе нарушение - мут на 10 минут
+        mute_role = discord.utils.get(message.guild.roles, id=MUTE_ROLE_ID)
+        
+        if mute_role:
+            try:
+                await user.add_roles(mute_role, reason=f"Авто-мут: {violation_type}")
+                
+                embed = discord.Embed(
+                    title="🔇 **АВТОМАТИЧЕСКИЙ МУТ**",
+                    description=f"{user.mention} получил мут на **{MUTE_DURATION_MINUTES} минут**.\n\n**Причина:** `{violation_type}` (повторное нарушение)",
+                    color=NeonColors.RED,
+                    timestamp=datetime.utcnow()
+                )
+                embed.set_footer(text="NeonSyntax | DevStudio • Автомодерация")
+                
+                await message.channel.send(embed=embed)
+                
+                await log_action(message.guild, 'auto_mute', message.guild.me, user, f"{violation_type} (повторное нарушение)", f"{MUTE_DURATION_MINUTES} мин.")
+                
+                # Автоматическое снятие мута
+                await asyncio.sleep(MUTE_DURATION_MINUTES * 60)
+                
+                if mute_role in user.roles:
+                    await user.remove_roles(mute_role, reason="Авто-мут истёк")
+                    
+                    unmute_embed = discord.Embed(
+                        title="🔊 **МУТ СНЯТ**",
+                        description=f"{user.mention}, ваш мут истёк. Пожалуйста, соблюдайте правила сервера.",
+                        color=NeonColors.GREEN,
+                        timestamp=datetime.utcnow()
+                    )
+                    await message.channel.send(embed=unmute_embed)
+                    
+                    await log_action(message.guild, 'unmute', message.guild.me, user, "Авто-мут истёк")
+                
+            except Exception as e:
+                print(f"❌ Ошибка при выдаче мута: {e}")
+
+@bot.event
+async def on_message(message):
+    # Игнорируем сообщения бота
+    if message.author.bot:
+        return
+    
+    # Проверка на спам
+    if await check_anti_spam(message):
+        await handle_violation(message, 'anti_spam')
+        return
+    
+    # Проверка на капс
+    if await check_anti_caps(message):
+        await handle_violation(message, 'anti_caps')
+        return
+    
+    # Обработка команд
+    await bot.process_commands(message)
+
+# ==========================================
 # 🎨 ШАБЛОНЫ EMBED
 # ==========================================
 
@@ -177,7 +359,6 @@ def create_welcome_embed(member):
         timestamp=datetime.utcnow()
     )
     
-    # ✅ Добавляем аватарку пользователя
     if member.avatar:
         embed.set_thumbnail(url=member.avatar.url)
     else:
@@ -910,6 +1091,9 @@ async def on_ready():
     bot.add_view(StaffPanelView())
     bot.add_view(CloseTicketView())
     
+    # Загрузка нарушений
+    get_violations()
+    
     # ✅ УСТАНОВКА СТАТУСА БОТА
     status = discord.Activity(
         type=discord.ActivityType.watching,
@@ -925,6 +1109,7 @@ async def on_ready():
     print(f'🔨 Система модерации: Готова')
     print(f'📋 Система логов: Готова')
     print(f'👑 Система embed: Готова')
+    print(f'🤖 Авто-модерация: Активирована')
     print(f'🎧 Статус: Слушает !start /start | !help /help')
 
 bot.run(BOT_TOKEN)
