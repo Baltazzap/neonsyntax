@@ -32,7 +32,7 @@ print(f"LOG_CHANNEL: {'✅' if LOG_CHANNEL > 0 else '❌'}")
 print(f"AUTO_ROLE: {'✅' if AUTO_ROLE > 0 else '❌'}")
 print(f"MUTE_ROLE: {'✅' if MUTE_ROLE > 0 else '❌'}")
 
-if not TOKEN or len(TOKEN) < 50:
+if not DISCORD_TOKEN or len(DISCORD_TOKEN) < 50:
     print("❌ ОШИБКА: Неверный токен бота!")
     exit(1)
 
