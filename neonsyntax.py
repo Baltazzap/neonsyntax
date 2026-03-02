@@ -24,7 +24,7 @@ from typing import Optional
 # ============================================
 
 print("🔍 Проверка конфигурации...")
-print(f"TOKEN: {'✅' if TOKEN and len(TOKEN) > 50 else '❌'}")
+print(f"DISCORD_TOKEN: {'✅' if DISCORD_TOKEN and len(DISCORD_TOKEN) > 50 else '❌'}")
 print(f"GUILD_ID: {'✅' if GUILD_ID > 0 else '❌'} ({GUILD_ID})")
 print(f"OWNER_ID: {'✅' if OWNER_ID > 0 else '❌'} ({OWNER_ID})")
 print(f"WELCOME_CHANNEL: {'✅' if WELCOME_CHANNEL > 0 else '❌'}")
