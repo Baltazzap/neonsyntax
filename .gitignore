@@ -4,4 +4,5 @@ __pycache__/
 tickets.json
 staff_tickets.json
 warnings.json
+violations.json
 *.log
