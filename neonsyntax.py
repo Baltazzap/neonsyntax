@@ -47,6 +47,14 @@ LOGS_CHANNEL_ID = 1477964505546883184
 # ID владельца (твой Discord ID)
 OWNER_ID = 314805583788244993
 
+# ID каналов для приветствия
+CHANNEL_RULES = 1477955006203428919
+CHANNEL_ORDER = 1477956383520325754
+CHANNEL_PRICE = 1477955733864710255
+CHANNEL_EXTRA = 1477955856279801969
+CHANNEL_PAYMENT = 1477955908536635514
+CHANNEL_GUARANTEE = 1477956108978098246
+
 if not BOT_TOKEN:
     raise ValueError("⚠️ Ошибка: Токен не найден! Проверь файл .env")
 
@@ -90,7 +98,7 @@ def save_warnings(data):
 
 def add_warning(user_id, moderator, reason):
     data = get_warnings()
-    if str(user_id) not in data:  # ✅ ИСПРАВЛЕНО: добавлено "data:"
+    if str(user_id) not in data:
         data[str(user_id)] = []
     data[str(user_id)].append({
         'moderator': moderator,
@@ -106,7 +114,7 @@ def get_user_warnings(user_id):
 
 def clear_warnings(user_id):
     data = get_warnings()
-    if str(user_id) in data:  # ✅ ИСПРАВЛЕНО: добавлено "data"
+    if str(user_id) in data:
         del data[str(user_id)]
         save_warnings(data)
 
@@ -164,13 +172,31 @@ async def log_action(guild, action_type, moderator, target, reason=None, duratio
 def create_welcome_embed(member):
     embed = discord.Embed(
         title=f"👋 Добро пожаловать, {member.name}!",
-        description="**Рады видеть тебя в NeonSyntax | DevStudio!**",
+        description="**Рады видеть тебя в NeonSyntax | DevStudio!**\n\nМы занимаемся профессиональной разработкой ботов для Discord и Telegram.",
         color=NeonColors.BLUE,
         timestamp=datetime.utcnow()
     )
-    embed.add_field(name="🤖 **Наши услуги**", value="• **Discord Боты** — модерация, экономика, магазины\n• **Telegram Боты** — рассылки, магазины, интеграции\n• **Парсеры** — сбор данных с сайтов", inline=False)
-    embed.add_field(name="🚀 **Быстрый старт**", value="`/start` — Главная\n`/price` — Прайс\n`/ticket` — Заказ\n`/staff` — Заявка в стафф", inline=False)
+    
+    # ✅ Добавляем аватарку пользователя
+    if member.avatar:
+        embed.set_thumbnail(url=member.avatar.url)
+    else:
+        embed.set_thumbnail(url=member.default_avatar.url)
+    
+    embed.add_field(
+        name="🤖 **Наши услуги**", 
+        value="• **Discord Боты** — модерация, экономика, магазины, тикеты\n• **Telegram Боты** — рассылки, магазины, интеграции, оплата", 
+        inline=False
+    )
+    
+    embed.add_field(
+        name="📌 **Ознакомься с каналами**", 
+        value=f"<#{CHANNEL_RULES}> — Правила сервера\n<#{CHANNEL_ORDER}> — Заказать услугу\n<#{CHANNEL_PRICE}> — Основной прайс-лист\n<#{CHANNEL_EXTRA}> — Дополнительные услуги\n<#{CHANNEL_PAYMENT}> — Условия оплаты\n<#{CHANNEL_GUARANTEE}> — Гарантии работы", 
+        inline=False
+    )
+    
     embed.set_footer(text=f"ID: {member.id} • NeonSyntax | DevStudio © {datetime.now().year}")
+    
     return embed
 
 def create_ticket_embed(ticket_number, bot_type, author):
@@ -207,7 +233,7 @@ def create_ticket_panel_embed():
         color=NeonColors.PURPLE,
         timestamp=datetime.utcnow()
     )
-    embed.add_field(name="💼 **Специализации**", value="• **Discord** — боты для серверов\n• **Telegram** — боты для бизнеса\n• **Web** — парсеры, API", inline=False)
+    embed.add_field(name="💼 **Специализации**", value="• **Discord** — боты для серверов\n• **Telegram** — боты для бизнеса", inline=False)
     embed.set_footer(text="NeonSyntax | DevStudio • Заказ услуг")
     return embed
 
@@ -671,7 +697,7 @@ class EmbedModal(Modal, title="📝 Создание Embed"):
         placeholder="Введите описание embed",
         required=False,
         style=discord.TextStyle.long,
-        max_length=4000  # ✅ ИСПРАВЛЕНО: было 4096
+        max_length=4000
     )
     
     color_input = TextInput(
