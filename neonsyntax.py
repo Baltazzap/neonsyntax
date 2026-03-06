@@ -119,59 +119,14 @@ TRIVIA_QUESTIONS = [
 trivia_scores = {}
 active_trivia = None
 
-# --- СТРУКТУРА КАНАЛОВ ---
-CATEGORIES = {
-    "🏠 WELCOME & INFO": [
-        ("👋・welcome", "text"),
-        ("📜・rules", "text"),
-        ("📢・announcements", "text"),
-        ("🎁・roles", "text"),
-        ("🔗・useful-links", "text")
-    ],
-    "💬 GENERAL CHAT": [
-        ("💬・general", "text"),
-        ("🎮・gaming-chat", "text"),
-        ("📸・screenshots", "text"),
-        ("🤖・bot-commands", "text"),
-        ("💡・suggestions", "text")
-    ],
-    "🎯 THE DIVISION 2: GAME HUB": [
-        ("📰・td2-news", "text"),
-        ("⚙️・builds-theory", "text"),
-        ("🗺️・missions-help", "text"),
-        ("👾・boss-strats", "text"),
-        ("🛠️・tech-support", "text")
-    ],
-    "🔍 LFG / ACTIVITIES": [
-        ("🔍・lfg-pve", "text"),
-        ("🔥・lfg-raids", "text"),
-        ("🏆・lfg-battlepass", "text"),
-        ("🕐・scheduled-runs", "text"),
-        ("🌍・lfg-global", "text")
-    ],
-    "🔊 VOICE CHANNELS": [
-        ("🔊・Lobby", "voice"),
-        ("🔊・Squad-1", "voice"),
-        ("🔊・Squad-2", "voice"),
-        ("🔊・Raid-Command", "voice"),
-        ("🔊・AFK / Chill", "voice")
-    ],
-    "🛠️ STAFF & ADMIN": [
-        ("🔐・staff-chat", "text"),
-        ("📋・applications", "text"),
-        ("🗑️・mod-logs", "text"),
-        ("⚙️・server-setup", "text")
-    ]
-}
-
 # ============================================
-# ✅ КЛАСС ДЛЯ КНОПОК ЭКЗОТИКОВ (ИСПРАВЛЕНО)
+# ✅ КЛАСС ДЛЯ КНОПОК ЭКЗОТИКОВ
 # ============================================
 class ExoticSelectView(View):
     def __init__(self):
-        super().__init__(timeout=None)  # ✅ No timeout for persistent view
+        super().__init__(timeout=None)
     
-    @discord.ui.button(label="🎲 Random Exotic", style=discord.ButtonStyle.blurple, emoji="🎲", custom_id="exotic_random")  # ✅ custom_id added
+    @discord.ui.button(label="🎲 Random Exotic", style=discord.ButtonStyle.blurple, emoji="🎲", custom_id="exotic_random")
     async def random_exotic(self, interaction: discord.Interaction, button: Button):
         exotic = random.choice(EXOTICS_DB)
         embed = discord.Embed(title=f"🎲 Random Exotic: {exotic['name']}", description=f"**Type:** {exotic['type']}\n**Talent:** `{exotic['talent']}`", color=0xFFD700)
@@ -181,7 +136,7 @@ class ExoticSelectView(View):
         embed.set_footer(text="CoopFamily • Good luck farming!", icon_url="https://i.imgur.com/sAnFJ4c.png")
         await interaction.response.edit_message(embed=embed, view=ExoticSelectView())
     
-    @discord.ui.button(label="📋 All Exotics", style=discord.ButtonStyle.gray, emoji="📋", custom_id="exotic_all")  # ✅ custom_id added
+    @discord.ui.button(label="📋 All Exotics", style=discord.ButtonStyle.gray, emoji="📋", custom_id="exotic_all")
     async def all_exotics(self, interaction: discord.Interaction, button: Button):
         embed = discord.Embed(title="📋 All Exotics List", description="Here are all available exotic weapons and gear", color=0xFFD700)
         for i, exotic in enumerate(EXOTICS_DB, 1):
@@ -190,20 +145,19 @@ class ExoticSelectView(View):
         await interaction.response.edit_message(embed=embed, view=ExoticSelectView())
 
 # ============================================
-# ✅ КЛАСС ДЛЯ КНОПОК РОЛЕЙ (ИСПРАВЛЕНО)
+# ✅ КЛАСС ДЛЯ КНОПОК РОЛЕЙ
 # ============================================
 class RoleSelectView(View):
     def __init__(self):
-        super().__init__(timeout=None)  # ✅ No timeout for persistent view
+        super().__init__(timeout=None)
         for role_key, role_data in SELF_ASSIGNABLE_ROLES.items():
             emoji = role_data["emoji"]
             style = discord.ButtonStyle.blurple if role_key in ["PC", "PlayStation", "Xbox"] else discord.ButtonStyle.green if role_key in ["Ping-Events", "Ping-LFG"] else discord.ButtonStyle.gray
-            # ✅ custom_id added for each button
             self.add_item(RoleButton(role_key, role_data["id"], emoji, style, custom_id=f"role_{role_key}"))
 
 class RoleButton(Button):
     def __init__(self, role_key, role_id, emoji, style, custom_id):
-        super().__init__(style=style, label=role_key, emoji=emoji, custom_id=custom_id)  # ✅ custom_id passed
+        super().__init__(style=style, label=role_key, emoji=emoji, custom_id=custom_id)
         self.role_key = role_key
         self.role_id = role_id
     
@@ -226,7 +180,7 @@ class RoleButton(Button):
 # ============================================
 class TriviaView(View):
     def __init__(self, correct_answer: int, question_data: dict):
-        super().__init__(timeout=30)  # ⚠️ Has timeout, so NOT persistent (don't add to bot.add_view)
+        super().__init__(timeout=30)
         self.correct_answer = correct_answer
         self.question_data = question_data
         self.answered = False
@@ -271,7 +225,6 @@ async def on_ready():
     print(f'✅ Bot Online: {bot.user.name}')
     print(f'🔗 Server ID: {bot.guilds[0].id if bot.guilds else "N/A"}')
     await bot.change_presence(activity=discord.Game(name="The Division 2 | !help"))
-    # ✅ Register persistent views (only those with timeout=None and custom_id)
     bot.add_view(RoleSelectView())
     bot.add_view(ExoticSelectView())
 
@@ -331,33 +284,6 @@ async def auto_moderate(message):
             return
 
 # --- КОМАНДЫ ---
-
-@bot.command(name='setup')
-@commands.has_permissions(administrator=True)
-async def setup_server(ctx):
-    guild = ctx.guild
-    await ctx.send("🚀 **Starting CoopFamily Server Setup...**")
-    created_roles = {}
-    for role_name, color in ROLE_COLORS.items():
-        try:
-            role = await guild.create_role(name=role_name, color=discord.Color(color), reason="CoopFamily Setup")
-            created_roles[role_name] = role
-        except Exception as e:
-            print(f"❌ Error creating role {role_name}: {e}")
-    await ctx.send(f"🎨 **Created {len(created_roles)} roles.**")
-    for cat_name, channels in CATEGORIES.items():
-        try:
-            category = await guild.create_category_channel(cat_name)
-            if "STAFF" in cat_name:
-                await category.set_permissions(guild.default_role, view_channel=False)
-            for ch_name, ch_type in channels:
-                if ch_type == "text":
-                    await guild.create_text_channel(ch_name, category=category)
-                elif ch_type == "voice":
-                    await guild.create_voice_channel(ch_name, category=category)
-        except Exception as e:
-            print(f"❌ Error in category {cat_name}: {e}")
-    await ctx.send("✅ **Server Setup Complete!**")
 
 @bot.command(name='welcome')
 @commands.has_permissions(manage_messages=True)
@@ -477,7 +403,7 @@ async def help_command(ctx):
     embed.add_field(name="🎮 The Division 2", value="`!exotics` — Exotic info\n`!exotics <name>` — Search exotic\n`!meme` — Random meme\n`!trivia` — Start trivia\n`!trivia-leaderboard` — Show scores", inline=False)
     embed.add_field(name="💝 Community", value="`!compliment @user` — Give compliment", inline=False)
     embed.add_field(name="🏓 Utilities", value="`!help` — Show this menu\n`!ping` — Check latency", inline=False)
-    embed.set_footer(text="CoopFamily Bot v1.8", icon_url="https://i.imgur.com/sAnFJ4c.png")
+    embed.set_footer(text="CoopFamily Bot v1.9", icon_url="https://i.imgur.com/sAnFJ4c.png")
     await ctx.send(embed=embed)
 
 @bot.command(name='ping')
@@ -488,11 +414,6 @@ async def ping_command(ctx):
     await ctx.send(embed=embed)
 
 # --- ОБРАБОТКА ОШИБОК ---
-@setup_server.error
-async def setup_error(ctx, error):
-    if isinstance(error, commands.MissingPermissions):
-        await ctx.send("❌ Administrator permissions required!")
-
 @send_welcome.error
 @send_rules.error
 @send_roles.error
@@ -501,10 +422,15 @@ async def perm_error(ctx, error):
     if isinstance(error, commands.MissingPermissions):
         await ctx.send("❌ Manage Messages permissions required!")
 
+@help_command.error
+@ping_command.error
+async def cmd_error(ctx, error):
+    await ctx.send(f"❌ Error: {error}")
+
 # --- ЗАПУСК ---
 if __name__ == "__main__":
     try:
-        print("🚀 Starting CoopFamily Bot v1.8...")
+        print("🚀 Starting CoopFamily Bot v1.9...")
         bot.run(TOKEN)
     except discord.LoginFailure:
         print("❌ Invalid token!")
